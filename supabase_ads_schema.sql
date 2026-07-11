@@ -185,6 +185,22 @@ create index if not exists store_branches_store_idx on public.store_branches(sto
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end; $$;
 
+-- Stores can edit campaign contents, but status changes are permitted only through the
+-- audited RPCs below. This prevents a direct REST update from bypassing review.
+create or replace function public.enforce_campaign_status_transition()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' and not public.is_app_developer() then
+    new.status := 'draft';
+  end if;
+  if tg_op = 'UPDATE'
+    and new.status is distinct from old.status
+    and coalesce(current_setting('app.campaign_transition', true), '') <> 'allowed' then
+    raise exception 'campaign status must be changed through an approved workflow';
+  end if;
+  return new;
+end; $$;
+
 drop trigger if exists app_roles_updated_at on public.app_roles;
 create trigger app_roles_updated_at before update on public.app_roles for each row execute function public.set_updated_at();
 drop trigger if exists stores_updated_at on public.stores;
@@ -193,6 +209,8 @@ drop trigger if exists store_branches_updated_at on public.store_branches;
 create trigger store_branches_updated_at before update on public.store_branches for each row execute function public.set_updated_at();
 drop trigger if exists ad_campaigns_updated_at on public.ad_campaigns;
 create trigger ad_campaigns_updated_at before update on public.ad_campaigns for each row execute function public.set_updated_at();
+drop trigger if exists enforce_campaign_status_transition on public.ad_campaigns;
+create trigger enforce_campaign_status_transition before insert or update on public.ad_campaigns for each row execute function public.enforce_campaign_status_transition();
 
 -- State transitions that change review status always go through these RPC functions.
 create or replace function public.submit_campaign(target_campaign_id uuid)
@@ -202,6 +220,7 @@ begin
   select * into result from public.ad_campaigns where id = target_campaign_id for update;
   if result.id is null or not public.can_manage_store(result.store_id) then raise exception 'campaign not found'; end if;
   if result.status not in ('draft', 'rejected') then raise exception 'campaign cannot be submitted'; end if;
+  perform set_config('app.campaign_transition', 'allowed', true);
   update public.ad_campaigns set status = 'submitted', submitted_at = now(), rejection_reason = null where id = target_campaign_id returning * into result;
   insert into public.audit_logs(actor_id, action, entity_type, entity_id) values (auth.uid(), 'submitted', 'campaign', target_campaign_id);
   return result;
@@ -213,7 +232,16 @@ declare result public.ad_campaigns; next_status public.ad_campaign_status;
 begin
   if not public.is_app_developer() then raise exception 'developer role required'; end if;
   if decision not in ('approved', 'rejected', 'paused') then raise exception 'invalid decision'; end if;
-  next_status := decision::public.ad_campaign_status;
+  select * into result from public.ad_campaigns where id = target_campaign_id for update;
+  if result.id is null then raise exception 'campaign not found'; end if;
+  if decision in ('approved', 'rejected') and result.status <> 'submitted' then raise exception 'campaign is not awaiting review'; end if;
+  if decision = 'paused' and result.status not in ('approved', 'scheduled', 'active') then raise exception 'campaign cannot be paused'; end if;
+  next_status := case
+    when decision = 'approved' and result.starts_at > now() then 'scheduled'::public.ad_campaign_status
+    when decision = 'approved' then 'active'::public.ad_campaign_status
+    else decision::public.ad_campaign_status
+  end;
+  perform set_config('app.campaign_transition', 'allowed', true);
   update public.ad_campaigns
     set status = next_status,
         approved_at = case when decision = 'approved' then now() else approved_at end,
@@ -233,6 +261,8 @@ declare result public.ad_campaigns;
 begin
   select * into result from public.ad_campaigns where id = target_campaign_id for update;
   if result.id is null or not (public.is_app_developer() or public.can_manage_store(result.store_id)) then raise exception 'campaign not found'; end if;
+  if result.status not in ('approved', 'scheduled', 'active') then raise exception 'campaign cannot be stopped'; end if;
+  perform set_config('app.campaign_transition', 'allowed', true);
   update public.ad_campaigns set status = 'paused', paused_at = now() where id = target_campaign_id returning * into result;
   insert into public.audit_logs(actor_id, action, entity_type, entity_id) values (auth.uid(), 'paused', 'campaign', target_campaign_id);
   return result;
