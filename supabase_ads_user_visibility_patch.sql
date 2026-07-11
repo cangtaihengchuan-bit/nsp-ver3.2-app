@@ -36,6 +36,40 @@ delete from public.ad_campaigns
  where external_key = 'sample-kakigori-syrup-campaign'
    and user_notice = '表示確認用のサンプル広告です。';
 
+-- The designated board-test account operates the database-backed developer
+-- and store test screens. This provisions roles only; it never creates ads.
+do $$
+declare
+  test_user_id uuid;
+  sample_store_id uuid;
+begin
+  select id into test_user_id
+    from auth.users
+   where lower(email) = 'codex.board.test+20260620@gmail.com'
+   limit 1;
+
+  if test_user_id is not null then
+    insert into public.app_roles(user_id, role)
+    values (test_user_id, 'developer')
+    on conflict (user_id) do update set role = excluded.role;
+
+    insert into public.stores(external_key, name, profile, contact_note)
+    values (
+      'sample-supermarket-1',
+      '駅前サンプルスーパー',
+      'ユーザー向けの駅前サンプルスーパーと同じ店舗です。',
+      'board test account'
+    )
+    on conflict (external_key) do update
+      set name = excluded.name
+    returning id into sample_store_id;
+
+    insert into public.store_members(store_id, user_id, member_role)
+    values (sample_store_id, test_user_id, 'owner')
+    on conflict (store_id, user_id) do update set member_role = excluded.member_role;
+  end if;
+end $$;
+
 create index if not exists ad_campaigns_user_store_status_idx
   on public.ad_campaigns(user_store_id, status, starts_at, ends_at)
   where user_store_id is not null;

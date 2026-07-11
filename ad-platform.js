@@ -55,6 +55,60 @@
     return rows?.[0]?.role || "user";
   }
 
+  async function databaseRole() {
+    if (!session()) return "user";
+    return await rpc("current_app_role");
+  }
+
+  async function importSavedDemoCampaigns() {
+    const key = "kaimono-clock-demo-campaigns-v1";
+    let campaigns;
+    try { campaigns = JSON.parse(localStorage.getItem(key) || "[]"); } catch { campaigns = []; }
+    if (!Array.isArray(campaigns) || !campaigns.length || await databaseRole() !== "developer") return 0;
+
+    const stores = await request("stores?select=*&external_key=eq.sample-supermarket-1&limit=1");
+    const store = stores?.[0];
+    if (!store) throw new Error("駅前サンプルスーパーのDB店舗が見つかりません。");
+
+    let imported = 0;
+    for (const campaign of campaigns) {
+      if (!campaign?.product_name || !campaign?.headline || !campaign?.starts_at || !campaign?.ends_at) continue;
+      const sourceId = String(campaign.id || `${campaign.product_name}-${campaign.starts_at}`);
+      const externalKey = `browser-demo-${sourceId.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80)}`;
+      const existing = await request(`ad_campaigns?select=id&external_key=eq.${encodeURIComponent(externalKey)}&limit=1`);
+      if (existing?.length) continue;
+      const allowedStatuses = ["draft", "submitted", "approved", "scheduled", "active", "paused", "ended", "rejected"];
+      const status = allowedStatuses.includes(campaign.status) ? campaign.status : "draft";
+      const payload = {
+        external_key: externalKey,
+        store_id: store.id,
+        user_store_id: store.external_key,
+        store_name: store.name,
+        product_name: campaign.product_name,
+        headline: campaign.headline,
+        regular_price: campaign.regular_price ?? null,
+        sale_price: campaign.sale_price ?? null,
+        discount_conditions: campaign.discount_conditions || null,
+        starts_at: campaign.starts_at,
+        ends_at: campaign.ends_at,
+        category: campaign.category || "other",
+        stock_note: campaign.stock_note || null,
+        user_notice: campaign.user_notice || null,
+        weekday_mask: Array.isArray(campaign.weekday_mask) ? campaign.weekday_mask : [],
+        delivery_categories: [],
+        status,
+        submitted_at: campaign.submitted_at || (status !== "draft" ? new Date().toISOString() : null),
+        approved_at: ["approved", "scheduled", "active"].includes(status) ? (campaign.approved_at || new Date().toISOString()) : null,
+        approved_by: ["approved", "scheduled", "active"].includes(status) ? session().user.id : null,
+        rejection_reason: campaign.rejection_reason || null
+      };
+      await request("ad_campaigns", { method: "POST", body: JSON.stringify(payload) });
+      imported += 1;
+    }
+    if (imported || campaigns.length) localStorage.removeItem(key);
+    return imported;
+  }
+
   async function requireRole(required) {
     const actual = await role().catch(() => "user");
     if (actual !== required) {
@@ -126,5 +180,5 @@
     return ["approved", "scheduled", "active"].includes(campaign.status) && start <= now && end >= now;
   }
 
-  window.KaimonoAds = { SUPABASE_URL, SUPABASE_ANON_KEY, VERSION, session, request, rpc, role, requireRole, exitSpecialMode, escapeHtml, mask, yen, localImpressionAllowed, track, logError, uploadCampaignImage, campaignImageUrl, activeNow };
+  window.KaimonoAds = { SUPABASE_URL, SUPABASE_ANON_KEY, VERSION, session, request, rpc, role, databaseRole, importSavedDemoCampaigns, requireRole, exitSpecialMode, escapeHtml, mask, yen, localImpressionAllowed, track, logError, uploadCampaignImage, campaignImageUrl, activeNow };
 })();
