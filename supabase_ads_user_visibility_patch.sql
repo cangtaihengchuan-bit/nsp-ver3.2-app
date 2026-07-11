@@ -17,6 +17,19 @@ update public.ad_campaigns campaign
  where campaign.store_id = store.id
    and (campaign.user_store_id is null or campaign.store_name = '');
 
+update public.ad_campaigns campaign
+   set user_store_id = 'sample-supermarket-1'
+ where campaign.user_store_id is null
+   and (
+     campaign.store_name = '駅前サンプルスーパー'
+     or exists (
+       select 1
+       from public.stores store
+       where store.id = campaign.store_id
+         and store.name = '駅前サンプルスーパー'
+     )
+   );
+
 create index if not exists ad_campaigns_user_store_status_idx
   on public.ad_campaigns(user_store_id, status, starts_at, ends_at)
   where user_store_id is not null;
@@ -29,12 +42,20 @@ language sql stable security definer set search_path = public as $$
   where campaign.status in ('approved', 'scheduled', 'active')
     and campaign.starts_at <= now()
     and campaign.ends_at >= now()
-    and campaign.user_store_id is not null
     and exists (
       select 1
       from public.nsp_user_discounts discount
       where discount.user_id = auth.uid()
-        and discount.store_id = campaign.user_store_id
+        and (
+          discount.store_id = campaign.user_store_id
+          or discount.store_name = campaign.store_name
+          or exists (
+            select 1
+            from public.stores store
+            where store.id = campaign.store_id
+              and (discount.store_id = store.external_key or discount.store_name = store.name)
+          )
+        )
     )
   order by campaign.starts_at desc
   limit 50;
@@ -48,12 +69,20 @@ language sql stable security definer set search_path = public as $$
   where campaign.status in ('approved', 'scheduled', 'active')
     and campaign.starts_at <= now()
     and campaign.ends_at >= now()
-    and campaign.user_store_id is not null
     and exists (
       select 1
       from public.nsp_user_discounts discount
       where discount.user_id = auth.uid()
-        and discount.store_id = campaign.user_store_id
+        and (
+          discount.store_id = campaign.user_store_id
+          or discount.store_name = campaign.store_name
+          or exists (
+            select 1
+            from public.stores store
+            where store.id = campaign.store_id
+              and (discount.store_id = store.external_key or discount.store_name = store.name)
+          )
+        )
     )
   order by campaign.starts_at desc
   limit 50;

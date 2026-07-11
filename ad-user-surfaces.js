@@ -197,7 +197,7 @@
           };
           return;
         }
-        list.innerHTML = `<p class="store-ad-empty">割引メモに登録済みの店舗から、配信中のお知らせはありません。</p>`;
+        list.innerHTML = `<p class="store-ad-empty">割引メモに登録済みの店舗から、配信中のお知らせはありません。広告の店舗ID・店舗名・配信期間を確認してください。</p>`;
         return;
       }
       list.innerHTML = campaigns.map(card).join("");
