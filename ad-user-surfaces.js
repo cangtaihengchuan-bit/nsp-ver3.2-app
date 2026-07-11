@@ -5,6 +5,7 @@
 
   const PAGE = location.pathname.endsWith("shopping.html") ? "shopping" : "discount";
   const HIDE_KEY = "kaimono-clock-hidden-store-ads";
+  const DEMO_CAMPAIGNS_KEY = "kaimono-clock-demo-campaigns-v1";
   const SAMPLE_STORE_ID = "sample-supermarket-1";
   let userId = A.session()?.user?.id || "guest";
   let hidden = loadHidden();
@@ -81,6 +82,19 @@
     };
   }
 
+  function localDemoCampaigns() {
+    try {
+      return JSON.parse(localStorage.getItem(DEMO_CAMPAIGNS_KEY) || "[]")
+        .filter((campaign) => campaign && campaign.user_store_id === SAMPLE_STORE_ID)
+        .map((campaign) => ({
+          ...campaign,
+          id: campaign.id || `demo-${campaign.product_name || campaign.headline || Date.now()}`
+        }));
+    } catch {
+      return [];
+    }
+  }
+
   async function hasSampleStoreRegistration() {
     if (!A.session()) return false;
     if (new URLSearchParams(location.search).get("sample") === "1") return true;
@@ -103,6 +117,20 @@
         throw error;
       }
     }
+  }
+
+  async function loadCampaignsForUser() {
+    let rows = [];
+    try {
+      rows = await loadRegisteredCampaigns();
+    } catch (error) {
+      if (!localDemoCampaigns().length) throw error;
+    }
+    const merged = [...(rows || [])];
+    localDemoCampaigns().forEach((campaign) => {
+      if (!merged.some((row) => row.id === campaign.id)) merged.unshift(campaign);
+    });
+    return merged;
   }
 
   function card(campaign) {
@@ -137,7 +165,7 @@
     }
     list.innerHTML = `<p class="store-ad-empty">店舗からのお知らせを読み込んでいます。</p>`;
     try {
-      const rows = await loadRegisteredCampaigns();
+      const rows = await loadCampaignsForUser();
       const eligibleCampaigns = (rows || []).filter((campaign) => A.activeNow(campaign) && campaign.user_store_id);
       const campaigns = eligibleCampaigns.filter((campaign) => !hidden.has(campaign.id)).slice(0, 3);
       if (!campaigns.length) {
