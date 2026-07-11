@@ -545,6 +545,20 @@ language sql stable security definer set search_path = public as $$
   group by c.id;
 $$;
 
+create or replace function public.developer_review_campaigns()
+returns setof public.ad_campaigns
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_app_developer() then
+    raise exception 'developer role required';
+  end if;
+
+  return query
+    select *
+    from public.ad_campaigns
+    order by updated_at desc;
+end; $$;
+
 create or replace function public.developer_data_counts()
 returns table(user_count bigint, store_count bigint, campaign_count bigint, discount_count bigint, error_count bigint)
 language sql stable security definer set search_path = public as $$
@@ -627,7 +641,7 @@ grant usage on schema public to authenticated;
 grant select on public.app_roles, public.stores, public.store_members, public.store_branches, public.ad_campaigns, public.ad_campaign_targets, public.ad_campaign_reviews to authenticated;
 grant insert, update, delete on public.stores, public.store_branches, public.ad_campaigns, public.ad_campaign_targets to authenticated;
 grant insert on public.campaign_events, public.app_error_logs to authenticated;
-grant execute on function public.current_app_role(), public.is_app_developer(), public.can_manage_store(uuid), public.can_view_store(uuid), public.can_manage_store_path(text), public.submit_campaign(uuid), public.review_campaign(uuid, text, text), public.stop_campaign(uuid), public.store_campaign_metrics(uuid), public.developer_data_counts(), public.active_ad_campaigns(), public.registered_store_ad_campaigns(), public.seed_user_sample_discount(), public.is_active_campaign(uuid), public.create_debug_sample_campaign() to authenticated;
+grant execute on function public.current_app_role(), public.is_app_developer(), public.can_manage_store(uuid), public.can_view_store(uuid), public.can_manage_store_path(text), public.submit_campaign(uuid), public.review_campaign(uuid, text, text), public.stop_campaign(uuid), public.store_campaign_metrics(uuid), public.developer_review_campaigns(), public.developer_data_counts(), public.active_ad_campaigns(), public.registered_store_ad_campaigns(), public.seed_user_sample_discount(), public.is_active_campaign(uuid), public.create_debug_sample_campaign() to authenticated;
 
 -- Optional campaign image storage. The object path always begins with the owning store UUID.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
