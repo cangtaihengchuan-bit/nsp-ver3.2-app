@@ -1,0 +1,2009 @@
+<!doctype html>
+<html lang="ja" data-theme="cool">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kaimono Clock | 買い物メモ</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <style>
+      :root {
+        --bg: #f4fbf8;
+        --paper: #fffdf7;
+        --ink: #152028;
+        --muted: #64748b;
+        --line: #dce6e4;
+        --mint: #35b6a6;
+        --mint-dark: #142c2c;
+        --coral: #ff8a6b;
+        --surface: #ffffff;
+        --field: #fffdf7;
+        --shadow: 0 18px 42px rgba(34, 79, 76, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgba(53, 182, 166, 0.12), rgba(255, 255, 255, 0) 320px),
+          var(--bg);
+        color: var(--ink);
+        font-family: "Inter", "Noto Sans JP", system-ui, sans-serif;
+      }
+
+      button,
+      input,
+      select { font: inherit; }
+
+      .app-shell {
+        width: min(1160px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 18px 0 36px;
+      }
+
+      .experience-nav,
+      .top-bar,
+      .panel {
+        border: 1px solid rgba(220, 230, 228, 0.95);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--surface) 92%, transparent);
+        box-shadow: var(--shadow);
+      }
+
+      .experience-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 12px;
+      }
+
+      .mobile-menu-btn,
+      .mobile-menu-close,
+      .mobile-menu-backdrop {
+        display: none;
+      }
+
+      .experience-brand,
+      .experience-links {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex-wrap: wrap;
+      }
+
+      .experience-logo {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border-radius: 8px;
+        color: #fff;
+        background: linear-gradient(140deg, var(--mint), var(--coral));
+        font-weight: 900;
+      }
+
+      .theme-control,
+      .session-pill,
+      .experience-link,
+      .session-logout {
+        min-height: 38px;
+        display: inline-grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 10px;
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 0.84rem;
+        font-weight: 900;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .theme-control {
+        grid-auto-flow: column;
+        gap: 8px;
+      }
+
+      .theme-control select {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-weight: 900;
+        outline: 0;
+      }
+
+      .session-pill {
+        color: var(--muted);
+        background: color-mix(in srgb, var(--field) 86%, transparent);
+      }
+
+      .experience-link.primary,
+      .nav-auth-form button,
+      .primary-button {
+        border-color: transparent;
+        color: #fff;
+        background: var(--mint-dark);
+      }
+
+      .session-logout,
+      .nav-auth-form button,
+      .primary-button,
+      .delete-button {
+        cursor: pointer;
+      }
+
+      .session-logout[hidden],
+      .nav-auth-form[hidden] { display: none; }
+
+      .nav-auth-form {
+        display: grid;
+        grid-template-columns: minmax(130px, 1fr) minmax(110px, 0.8fr) auto auto;
+        gap: 8px;
+        align-items: center;
+        min-width: min(100%, 520px);
+      }
+
+      .nav-auth-form input,
+      .shopping-form input,
+      .shopping-form select,
+      .recurring-form input,
+      .recurring-form select {
+        min-height: 38px;
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 10px;
+        background: var(--field);
+        color: var(--ink);
+        font-weight: 800;
+        outline: 0;
+      }
+
+      .nav-auth-form button,
+      .primary-button {
+        min-height: 38px;
+        border-radius: 8px;
+        padding: 0 12px;
+        font-weight: 900;
+      }
+
+      .top-bar {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 14px;
+        padding: 18px;
+      }
+
+      .eyebrow {
+        margin: 0 0 5px;
+        color: var(--mint);
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p { margin: 0; }
+
+      h1 {
+        font-size: clamp(1.55rem, 3vw, 2.5rem);
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+      }
+
+      .top-note {
+        color: var(--muted);
+        font-weight: 800;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.85fr);
+        gap: 14px;
+        align-items: start;
+      }
+
+      .panel {
+        padding: 16px;
+      }
+
+      .budget-summary {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .shopping-sync-status {
+        grid-column: 1 / -1;
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--field) 88%, transparent);
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .shopping-feedback {
+        grid-column: 1 / -1;
+        padding: 11px 12px;
+        border: 1px solid color-mix(in srgb, var(--mint) 55%, var(--line));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--mint) 14%, var(--field));
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 900;
+        line-height: 1.5;
+      }
+
+      .shopping-feedback[hidden] {
+        display: none;
+      }
+
+      .shopping-feedback.is-warning {
+        border-color: color-mix(in srgb, var(--coral) 55%, var(--line));
+        background: color-mix(in srgb, var(--coral) 12%, var(--field));
+      }
+
+      .shopping-sync-status[hidden] {
+        display: none;
+      }
+
+      .sync-reload-button {
+        min-height: 36px;
+        justify-self: start;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 12px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 900;
+      }
+
+      .loading-value {
+        width: min(160px, 100%);
+        min-height: 1em;
+        border-radius: 8px;
+        color: transparent !important;
+        background: linear-gradient(90deg, var(--field), color-mix(in srgb, var(--surface) 70%, var(--mint) 12%), var(--field));
+        background-size: 220% 100%;
+        animation: loadingShimmer 1.2s linear infinite;
+      }
+
+      @keyframes loadingShimmer {
+        from { background-position: 180% 0; }
+        to { background-position: -40% 0; }
+      }
+
+      .budget-card {
+        min-height: 86px;
+        display: grid;
+        gap: 6px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--field);
+      }
+
+      .budget-card span {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+      }
+
+      .budget-card strong {
+        font-size: clamp(1.35rem, 4vw, 1.9rem);
+        line-height: 1;
+      }
+
+      .budget-card.remaining strong {
+        color: var(--mint);
+      }
+
+      .budget-card.is-over strong {
+        color: var(--coral);
+      }
+
+      .budget-warning {
+        margin: 0;
+        color: var(--coral);
+        font-size: 0.78rem;
+        font-weight: 900;
+        line-height: 1.4;
+      }
+
+      .quick-add {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--field) 86%, transparent);
+      }
+
+      .quick-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+      }
+
+      .quick-chip-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+        gap: 8px;
+      }
+
+      .quick-chip,
+      .amount-chip {
+        min-height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 10px;
+        color: var(--ink);
+        background: var(--surface);
+        font-weight: 900;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      .recurring-panel {
+        grid-column: 1 / -1;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .report-note {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 900;
+      }
+
+      .shopping-form {
+        display: grid;
+        grid-template-columns: minmax(160px, 1.2fr) minmax(120px, 0.7fr) minmax(120px, 0.8fr) auto;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .recurring-form {
+        display: grid;
+        grid-template-columns: minmax(150px, 1fr) minmax(92px, 0.55fr) minmax(105px, 0.55fr) minmax(130px, 0.7fr) auto;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .shopping-form label,
+      .recurring-form label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+      }
+
+      .shopping-list,
+      .discount-candidates,
+      .recurring-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .shopping-item,
+      .discount-candidate,
+      .recurring-item,
+      .blank-row {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--field);
+      }
+
+      .shopping-item,
+      .discount-candidate,
+      .recurring-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+      }
+
+      .shopping-item.is-done {
+        opacity: 0.56;
+      }
+
+      .shopping-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .shopping-check input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--mint);
+      }
+
+      .shopping-main,
+      .candidate-main {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .shopping-main strong,
+      .candidate-main strong {
+        overflow-wrap: anywhere;
+      }
+
+      .shopping-meta,
+      .candidate-main small {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .price-pill {
+        display: inline-grid;
+        min-height: 32px;
+        place-items: center;
+        border-radius: 8px;
+        padding: 0 10px;
+        color: var(--mint-dark);
+        background: color-mix(in srgb, var(--mint) 18%, var(--field));
+        font-weight: 900;
+      }
+
+      .candidate-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .recurring-calendar {
+        margin-bottom: 14px;
+      }
+
+      .calendar-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .calendar-head button {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .weekday-row,
+      .mini-calendar {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .weekday-row {
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 0.7rem;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .mini-day {
+        min-height: 54px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px;
+        background: var(--surface);
+        font-size: 0.72rem;
+        font-weight: 900;
+      }
+
+      .mini-day.is-muted {
+        opacity: 0.38;
+      }
+
+      .mini-day.is-today {
+        border-color: var(--mint);
+        box-shadow: inset 0 0 0 1px var(--mint);
+      }
+
+      .mini-day.has-due {
+        background: color-mix(in srgb, var(--coral) 16%, var(--field));
+      }
+
+      .due-dot {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        overflow: hidden;
+        color: var(--coral);
+        font-size: 0.62rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .delete-button,
+      .candidate-actions button {
+        display: grid;
+        min-width: 38px;
+        min-height: 38px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 900;
+      }
+
+      .delete-button svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .blank-row {
+        padding: 14px;
+        color: var(--muted);
+        font-weight: 800;
+        line-height: 1.55;
+      }
+
+      .recurring-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .recurring-actions button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 10px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 900;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      html[data-theme="cool"] {
+        --bg: #0c1622;
+        --paper: #151b23;
+        --ink: #dce7ef;
+        --muted: #9aa8b4;
+        --line: #303b47;
+        --mint: #9cdcfe;
+        --mint-dark: #2b6f88;
+        --coral: #75beff;
+        --surface: #151b23;
+        --field: #101820;
+        --shadow: 0 22px 54px rgba(0, 0, 0, 0.38);
+      }
+
+      html[data-theme="warm"] {
+        --bg: #fff7ed;
+        --paper: #fffaf0;
+        --ink: #24332f;
+        --muted: #687a75;
+        --line: #f0d7ca;
+        --mint: #22b8a1;
+        --mint-dark: #ff8a6b;
+        --coral: #ff7a59;
+        --surface: #fffaf0;
+        --field: #fff7ed;
+      }
+
+      html[data-theme="white-blue"] {
+        --bg: #f8fcff;
+        --paper: #ffffff;
+        --ink: #213042;
+        --muted: #5b6f86;
+        --line: #b9d9f0;
+        --mint: #38a3d1;
+        --mint-dark: #4aaee8;
+        --coral: #7ccdf7;
+        --surface: #ffffff;
+        --field: #f8fcff;
+      }
+
+      html[data-theme="cool"] body {
+        background:
+          radial-gradient(circle at 12% 10%, rgba(156, 220, 254, 0.12), transparent 24rem),
+          radial-gradient(circle at 88% 4%, rgba(117, 190, 255, 0.14), transparent 22rem),
+          linear-gradient(180deg, #060b12 0%, #0c1622 48%, #080d14 100%);
+      }
+
+      html[data-theme="warm"] body {
+        background:
+          linear-gradient(180deg, rgba(255, 138, 107, 0.14), rgba(255, 255, 255, 0) 320px),
+          var(--bg);
+      }
+
+      html[data-theme="white-blue"] body {
+        background:
+          linear-gradient(180deg, rgba(124, 205, 247, 0.22), rgba(255, 255, 255, 0) 320px),
+          var(--bg);
+      }
+
+      html[data-theme] .experience-nav,
+      html[data-theme] .top-bar,
+      html[data-theme] .panel,
+      html[data-theme] .budget-card,
+      html[data-theme] .quick-add,
+      html[data-theme] .shopping-item,
+      html[data-theme] .discount-candidate,
+      html[data-theme] .recurring-item,
+      html[data-theme] .blank-row,
+      html[data-theme] .mini-day,
+      html[data-theme] .price-pill {
+        border-color: var(--line);
+      }
+
+      html[data-theme="cool"] .experience-logo {
+        background: linear-gradient(140deg, #2b6f88, #75beff);
+      }
+
+      html[data-theme="cool"] .experience-link.primary,
+      html[data-theme="cool"] .nav-auth-form button,
+      html[data-theme="cool"] .primary-button {
+        background: linear-gradient(135deg, #2b6f88, #75beff);
+      }
+
+      html[data-theme="warm"] .experience-logo,
+      html[data-theme="warm"] .experience-link.primary,
+      html[data-theme="warm"] .nav-auth-form button,
+      html[data-theme="warm"] .primary-button {
+        background: linear-gradient(135deg, #ff8a6b, #ffb36b);
+      }
+
+      html[data-theme="white-blue"] .experience-link.primary,
+      html[data-theme="white-blue"] .nav-auth-form button,
+      html[data-theme="white-blue"] .primary-button {
+        color: #12344f;
+        background: linear-gradient(135deg, #7ccdf7, #b8e6ff);
+      }
+
+      @media (max-width: 860px) {
+        .app-shell {
+          width: auto;
+          max-width: none;
+          margin-left: 10px;
+          margin-right: 10px;
+        }
+
+        .mobile-menu-btn {
+          position: sticky;
+          top: 10px;
+          z-index: 45;
+          display: grid;
+          width: 44px;
+          height: 44px;
+          margin-bottom: 10px;
+          place-items: center;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          color: var(--ink);
+          background: color-mix(in srgb, var(--surface) 95%, transparent);
+          font-size: 1.4rem;
+          font-weight: 900;
+          box-shadow: var(--shadow);
+        }
+
+        .experience-nav,
+        .top-bar,
+        .layout,
+        .budget-summary {
+          grid-template-columns: 1fr;
+        }
+
+        .experience-nav {
+          position: fixed;
+          inset: 0 auto 0 0;
+          z-index: 44;
+          width: min(330px, calc(100% - 28px));
+          max-width: calc(100% - 28px);
+          height: 100dvh;
+          overflow: auto;
+          display: grid;
+          grid-template-columns: 1fr;
+          align-content: start;
+          align-items: stretch;
+          margin: 0;
+          padding: 16px;
+          border-radius: 0 8px 8px 0;
+          transform: translateX(-105%);
+          transition: transform 180ms ease;
+        }
+
+        .experience-nav.menu-open {
+          transform: translateX(0);
+        }
+
+        .mobile-menu-close {
+          display: grid;
+          width: 42px;
+          height: 42px;
+          margin-left: auto;
+          place-items: center;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          color: var(--ink);
+          background: var(--surface);
+          font-size: 1.4rem;
+          font-weight: 950;
+        }
+
+        .mobile-menu-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 43;
+          background: rgb(7 17 28 / 0.54);
+        }
+
+        .mobile-menu-backdrop.is-open {
+          display: block;
+        }
+
+        .experience-brand,
+        .experience-links {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .experience-link,
+        .session-pill,
+        .session-logout,
+        .theme-control {
+          width: 100%;
+        }
+
+        .nav-auth-form,
+        .shopping-form,
+        .recurring-form {
+          grid-template-columns: 1fr;
+          width: 100%;
+        }
+
+        .recurring-item {
+          grid-template-columns: 1fr;
+        }
+
+        .mini-day {
+          min-height: 48px;
+          padding: 4px;
+        }
+
+        h1 {
+          font-size: clamp(1.5rem, 8vw, 2rem);
+        }
+
+        .quick-title {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <button id="menuToggle" class="mobile-menu-btn" type="button" aria-controls="experienceNav" aria-expanded="false">☰</button>
+      <button id="menuBackdrop" class="mobile-menu-backdrop" type="button" aria-label="メニューを閉じる"></button>
+      <nav id="experienceNav" class="experience-nav" aria-label="アプリ体験ナビゲーション">
+        <button id="menuClose" class="mobile-menu-close" type="button" aria-label="メニューを閉じる">×</button>
+        <div class="experience-brand">
+          <span class="experience-logo">K</span>
+          <strong>Kaimono Clock</strong>
+        </div>
+        <label class="theme-control">
+          <span>カラー</span>
+          <select data-theme-select aria-label="テーマカラー">
+            <option value="warm">暖色</option>
+            <option value="cool">寒色</option>
+            <option value="white-blue">白青</option>
+          </select>
+        </label>
+        <div class="experience-links">
+          <span id="sessionPill" class="session-pill">未ログイン</span>
+          <form id="shoppingAuthForm" class="nav-auth-form">
+            <input id="shoppingAuthEmail" type="email" autocomplete="email" placeholder="メール" required>
+            <input id="shoppingAuthPassword" type="password" autocomplete="current-password" placeholder="パスワード" required>
+            <button type="submit">ログイン</button>
+            <button id="shoppingSignupBtn" type="button">登録</button>
+          </form>
+          <button id="shoppingLogoutBtn" class="session-logout" type="button" hidden>ログアウト</button>
+          <a class="experience-link" href="./index.html">体験トップ</a>
+          <a class="experience-link primary" href="./shopping.html" aria-current="page">買い物メモ</a>
+          <a class="experience-link" href="./app.html">割引メモ</a>
+          <a class="experience-link" href="./household.html">家計簿</a>
+        </div>
+      </nav>
+
+      <header class="top-bar">
+        <div>
+          <p class="eyebrow">Shopping</p>
+          <h1>買い物メモ</h1>
+        </div>
+        <p class="top-note">買う前に予定金額を見て、生活費の残りと合わせて確認します。</p>
+      </header>
+
+      <main class="layout">
+        <section id="shoppingSyncStatus" class="shopping-sync-status" hidden aria-live="polite">
+          <span id="shoppingSyncText">買い物情報を読み込んでいます</span>
+          <button id="shoppingReloadButton" class="sync-reload-button" type="button" hidden>再読み込み</button>
+        </section>
+        <p id="shoppingFeedback" class="shopping-feedback" hidden aria-live="polite"></p>
+
+        <section class="budget-summary" aria-label="今日の買い物予算">
+          <div class="budget-card">
+            <span>今日使える目安</span>
+            <strong id="dailyBudgetEstimate">¥0</strong>
+          </div>
+          <div class="budget-card">
+            <span>買い物予定</span>
+            <strong id="plannedShoppingTotal">¥0</strong>
+          </div>
+          <div id="plannedRemainingCard" class="budget-card remaining">
+            <span>残り</span>
+            <strong id="plannedRemaining">¥0</strong>
+            <p id="plannedWarning" class="budget-warning" hidden></p>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="買い物メモ">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Memo</p>
+              <h2>買うもの</h2>
+            </div>
+            <span id="shoppingCount" class="report-note">0件</span>
+          </div>
+          <section class="quick-add" aria-label="クイック追加">
+            <div class="quick-title">
+              <span>クイック追加</span>
+              <span>よく買うものを入力に反映</span>
+            </div>
+            <div id="quickItemChips" class="quick-chip-row"></div>
+            <div id="quickAmountChips" class="quick-chip-row" aria-label="金額候補"></div>
+          </section>
+          <form id="shoppingForm" class="shopping-form">
+            <label>
+              買うもの
+              <input id="shoppingTitle" type="text" maxlength="40" placeholder="例: 牛乳" required>
+            </label>
+            <label>
+              目安金額
+              <input id="shoppingAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="198">
+            </label>
+            <label>
+              ジャンル
+              <select id="shoppingCategory" required></select>
+            </label>
+            <button class="primary-button" type="submit">追加</button>
+          </form>
+          <div id="shoppingList" class="shopping-list"></div>
+        </section>
+
+        <aside class="panel" aria-label="割引メモからの候補">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Discount</p>
+              <h2>割引候補</h2>
+            </div>
+            <span id="candidateCount" class="report-note">0件</span>
+          </div>
+          <div id="discountCandidates" class="discount-candidates"></div>
+        </aside>
+
+        <section class="panel recurring-panel" aria-label="繰り返し購入品">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Repeat</p>
+              <h2>繰り返し購入</h2>
+            </div>
+            <span id="recurringCount" class="report-note">0件</span>
+          </div>
+          <form id="recurringForm" class="recurring-form">
+            <label>
+              品名
+              <input id="recurringTitle" type="text" maxlength="40" placeholder="例: トイレットペーパー" required>
+            </label>
+            <label>
+              頻度
+              <input id="recurringFrequency" type="number" inputmode="numeric" min="1" step="1" placeholder="30" required>
+            </label>
+            <label>
+              目安金額
+              <input id="recurringAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="398">
+            </label>
+            <label>
+              最後に買った日
+              <input id="recurringLastDate" type="date" required>
+            </label>
+            <button class="primary-button" type="submit">登録</button>
+          </form>
+
+          <div class="recurring-calendar" aria-label="次回購入カレンダー">
+            <div class="calendar-head">
+              <button id="prevRecurringMonth" type="button" aria-label="前の月">‹</button>
+              <strong id="recurringMonthLabel">2026年7月</strong>
+              <button id="nextRecurringMonth" type="button" aria-label="次の月">›</button>
+            </div>
+            <div class="weekday-row" aria-hidden="true">
+              <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+            </div>
+            <div id="recurringCalendar" class="mini-calendar"></div>
+          </div>
+
+          <div id="recurringList" class="recurring-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyTemplate">
+      <div class="blank-row"><p></p></div>
+    </template>
+
+    <script>
+      const categories = [
+        { id: "food", label: "食費" },
+        { id: "daily", label: "日用品" },
+        { id: "daily-spend", label: "一日の支出" },
+        { id: "transport", label: "交通" },
+        { id: "study", label: "学業" },
+        { id: "fun", label: "遊び" },
+        { id: "other", label: "不明" }
+      ];
+
+      const SUPABASE_URL = "https://wnxphjricowzxbkwnmjx.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndueHBoanJpY293enhia3dubWp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDk5ODMsImV4cCI6MjA5NzQ4NTk4M30.p6lu6gNpdkTg0Nvnxj05m2tHbYeihYP7jFPdIEWfSxo";
+      const HOUSEHOLD_SHOPPING_TABLE = "nsp_household_shopping_items";
+      const HOUSEHOLD_RECURRING_TABLE = "nsp_household_recurring_items";
+      const HOUSEHOLD_RECORDS_TABLE = "nsp_household_records";
+      const SESSION_KEY = "kaimono-clock-session-v2";
+      const DISCOUNT_CACHE_KEY_PREFIX = "kaimono-clock-discount-cache-v2";
+      const THEME_KEY = "kaimono-clock-theme";
+      const SHOPPING_KEY = "monthMateShoppingItems";
+      const RECURRING_KEY = "monthMateRecurringItems";
+      const MONTHLY_BUDGETS_KEY = "monthMateMonthlyBudgets";
+      const LEGACY_BUDGET_KEY = "monthMateBudget";
+      const EXPENSES_KEY = "monthMateExpenses";
+      const FIXED_COSTS_KEY = "monthMateFixedCosts";
+
+      const quickItems = [
+        { title: "飲み物", category: "food", amount: 150 },
+        { title: "昼食", category: "food", amount: 500 },
+        { title: "米・パン", category: "food", amount: 400 },
+        { title: "卵", category: "food", amount: 250 },
+        { title: "牛乳", category: "food", amount: 220 },
+        { title: "冷凍食品", category: "food", amount: 300 },
+        { title: "洗剤", category: "daily", amount: 400 },
+        { title: "トイレットペーパー", category: "daily", amount: 500 },
+        { title: "文房具", category: "study", amount: 300 },
+        { title: "交通費", category: "transport", amount: 300 }
+      ];
+      const quickAmounts = [100, 300, 500, 1000];
+
+      const yen = new Intl.NumberFormat("ja-JP", {
+        style: "currency",
+        currency: "JPY",
+        maximumFractionDigits: 0
+      });
+
+      const state = {
+        shoppingItems: loadJson(SHOPPING_KEY, []),
+        recurringItems: loadJson(RECURRING_KEY, []),
+        discounts: [],
+        recurringViewDate: new Date(),
+        syncLoading: Boolean(currentUserId()),
+        syncFailed: false
+      };
+
+      const els = {
+        sessionPill: document.querySelector("#sessionPill"),
+        authForm: document.querySelector("#shoppingAuthForm"),
+        authEmail: document.querySelector("#shoppingAuthEmail"),
+        authPassword: document.querySelector("#shoppingAuthPassword"),
+        signupBtn: document.querySelector("#shoppingSignupBtn"),
+        logoutBtn: document.querySelector("#shoppingLogoutBtn"),
+        form: document.querySelector("#shoppingForm"),
+        title: document.querySelector("#shoppingTitle"),
+        amount: document.querySelector("#shoppingAmount"),
+        category: document.querySelector("#shoppingCategory"),
+        list: document.querySelector("#shoppingList"),
+        count: document.querySelector("#shoppingCount"),
+        dailyBudgetEstimate: document.querySelector("#dailyBudgetEstimate"),
+        plannedShoppingTotal: document.querySelector("#plannedShoppingTotal"),
+        plannedRemaining: document.querySelector("#plannedRemaining"),
+        plannedRemainingCard: document.querySelector("#plannedRemainingCard"),
+        plannedWarning: document.querySelector("#plannedWarning"),
+        syncStatus: document.querySelector("#shoppingSyncStatus"),
+        syncText: document.querySelector("#shoppingSyncText"),
+        reloadButton: document.querySelector("#shoppingReloadButton"),
+        feedback: document.querySelector("#shoppingFeedback"),
+        quickItemChips: document.querySelector("#quickItemChips"),
+        quickAmountChips: document.querySelector("#quickAmountChips"),
+        candidates: document.querySelector("#discountCandidates"),
+        candidateCount: document.querySelector("#candidateCount"),
+        recurringForm: document.querySelector("#recurringForm"),
+        recurringTitle: document.querySelector("#recurringTitle"),
+        recurringFrequency: document.querySelector("#recurringFrequency"),
+        recurringAmount: document.querySelector("#recurringAmount"),
+        recurringLastDate: document.querySelector("#recurringLastDate"),
+        recurringCount: document.querySelector("#recurringCount"),
+        recurringMonthLabel: document.querySelector("#recurringMonthLabel"),
+        recurringCalendar: document.querySelector("#recurringCalendar"),
+        recurringList: document.querySelector("#recurringList"),
+        prevRecurringMonth: document.querySelector("#prevRecurringMonth"),
+        nextRecurringMonth: document.querySelector("#nextRecurringMonth"),
+        emptyTemplate: document.querySelector("#emptyTemplate")
+      };
+
+      init();
+
+      async function init() {
+        setupThemeControls();
+        setupMobileMenu();
+        renderSessionPill();
+        els.category.innerHTML = categories
+          .map((category) => `<option value="${category.id}">${category.label}</option>`)
+          .join("");
+        els.recurringLastDate.value = dateKey(new Date());
+        renderQuickAdd();
+        els.form.addEventListener("submit", addShoppingItemFromForm);
+        els.recurringForm.addEventListener("submit", addRecurringItemFromForm);
+        els.prevRecurringMonth.addEventListener("click", () => moveRecurringMonth(-1));
+        els.nextRecurringMonth.addEventListener("click", () => moveRecurringMonth(1));
+        els.reloadButton.addEventListener("click", reloadShoppingData);
+        els.authForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          try {
+            await signIn(els.authEmail.value.trim(), els.authPassword.value);
+            els.authPassword.value = "";
+          } catch {
+            els.sessionPill.textContent = "ログイン失敗";
+          }
+        });
+        els.signupBtn.addEventListener("click", async () => {
+          try {
+            await signUp(els.authEmail.value.trim(), els.authPassword.value);
+            els.authPassword.value = "";
+          } catch {
+            els.sessionPill.textContent = "登録失敗";
+          }
+        });
+        els.logoutBtn.addEventListener("click", signOut);
+
+        if (currentUserId()) {
+          await reloadShoppingData();
+        } else {
+          render();
+        }
+      }
+
+      function setupThemeControls() {
+        const theme = localStorage.getItem(THEME_KEY) || "cool";
+        document.documentElement.dataset.theme = theme;
+        document.querySelectorAll("[data-theme-select]").forEach((select) => {
+          select.value = theme;
+          select.addEventListener("change", () => {
+            localStorage.setItem(THEME_KEY, select.value);
+            document.documentElement.dataset.theme = select.value;
+          });
+        });
+      }
+
+      function setupMobileMenu() {
+        const nav = document.querySelector("#experienceNav");
+        const toggle = document.querySelector("#menuToggle");
+        const close = document.querySelector("#menuClose");
+        const backdrop = document.querySelector("#menuBackdrop");
+        if (!nav || !toggle) return;
+        const setOpen = (open) => {
+          nav.classList.toggle("menu-open", open);
+          toggle.setAttribute("aria-expanded", String(open));
+          backdrop?.classList.toggle("is-open", open);
+        };
+        toggle.addEventListener("click", () => setOpen(!nav.classList.contains("menu-open")));
+        close?.addEventListener("click", () => setOpen(false));
+        backdrop?.addEventListener("click", () => setOpen(false));
+        nav.querySelectorAll("a").forEach((link) => {
+          link.addEventListener("click", () => setOpen(false));
+        });
+        window.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") setOpen(false);
+        });
+      }
+
+      function loadJson(key, fallback) {
+        try {
+          return JSON.parse(localStorage.getItem(key)) || fallback;
+        } catch {
+          return fallback;
+        }
+      }
+
+      function maskEmail(email) {
+        const [local, domain] = String(email || "").split("@");
+        if (!local || !domain) return "";
+        const maskedLocal = local.length <= 2
+          ? `${local[0] || ""}**${local.slice(-1) || ""}`
+          : `${local[0]}**${local.slice(-1)}`;
+        return `${maskedLocal}@${domain}`;
+      }
+
+      function currentSession() {
+        try {
+          return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+        } catch {
+          return null;
+        }
+      }
+
+      function currentUserId() {
+        return currentSession()?.user?.id || "";
+      }
+
+      function saveSession(session) {
+        if (session?.access_token) {
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        } else {
+          localStorage.removeItem(SESSION_KEY);
+        }
+        renderSessionPill();
+      }
+
+      function renderSessionPill() {
+        const session = currentSession();
+        const signedIn = Boolean(session?.user?.email);
+        els.sessionPill.textContent = signedIn ? `ログイン中: ${maskEmail(session.user.email)}` : "未ログイン";
+        els.authForm.hidden = signedIn;
+        els.logoutBtn.hidden = !signedIn;
+      }
+
+      function shouldRefreshSession(session) {
+        if (!session?.access_token || !session?.refresh_token || !session?.expires_at) return false;
+        return Math.floor(Date.now() / 1000) >= Number(session.expires_at) - 60;
+      }
+
+      async function refreshSessionIfNeeded() {
+        const session = currentSession();
+        if (!session?.access_token) return null;
+        if (!shouldRefreshSession(session)) return session;
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ refresh_token: session.refresh_token })
+        });
+        if (!response.ok) {
+          saveSession(null);
+          throw new Error("Session refresh failed");
+        }
+        const nextSession = await response.json();
+        saveSession(nextSession);
+        return nextSession;
+      }
+
+      async function authRequest(path, body) {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/${path}`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || `Auth request failed: ${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function signIn(email, password) {
+        if (!email || !password) return;
+        const data = await authRequest("token?grant_type=password", { email, password });
+        saveSession(data);
+        await reloadShoppingData();
+      }
+
+      async function signUp(email, password) {
+        if (!email || !password) return;
+        const data = await authRequest("signup", { email, password });
+        if (data?.access_token) {
+          saveSession(data);
+          await reloadShoppingData();
+        } else {
+          els.sessionPill.textContent = "登録メールを確認してください";
+        }
+      }
+
+      async function signOut() {
+        const session = currentSession();
+        if (session?.access_token) {
+          await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+            method: "POST",
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${session.access_token}`
+            }
+          }).catch(() => null);
+        }
+        saveSession(null);
+        state.shoppingItems = [];
+        state.recurringItems = [];
+        state.syncLoading = false;
+        state.syncFailed = false;
+        els.syncStatus.hidden = true;
+        els.reloadButton.hidden = true;
+        render();
+      }
+
+      async function reloadShoppingData() {
+        if (!currentUserId()) {
+          state.syncLoading = false;
+          state.syncFailed = false;
+          render();
+          return;
+        }
+        showShoppingLoading();
+        try {
+          await migrateShoppingLocalIfRemoteEmpty();
+          await loadShoppingFromSupabase();
+          await migrateRecurringLocalIfRemoteEmpty();
+          await loadRecurringFromSupabase();
+          state.syncLoading = false;
+          state.syncFailed = false;
+          els.syncStatus.hidden = true;
+          els.reloadButton.hidden = true;
+          render();
+        } catch {
+          showShoppingLoadError();
+          renderSessionPill();
+          els.sessionPill.textContent = `${els.sessionPill.textContent} / 同期未設定`;
+        }
+      }
+
+      function showShoppingLoading() {
+        state.syncLoading = true;
+        state.syncFailed = false;
+        els.syncStatus.hidden = false;
+        els.syncText.textContent = "買い物情報を読み込んでいます";
+        els.reloadButton.hidden = true;
+        [els.dailyBudgetEstimate, els.plannedShoppingTotal, els.plannedRemaining].forEach((node) => {
+          node.textContent = "読み込み中";
+          node.classList.add("loading-value");
+        });
+        els.plannedWarning.hidden = true;
+        els.plannedRemainingCard.classList.remove("is-over");
+        els.count.textContent = "読み込み中";
+        els.candidateCount.textContent = "読み込み中";
+        els.list.innerHTML = `<div class="blank-row"><p>買い物メモを読み込んでいます。</p></div>`;
+        els.candidates.innerHTML = `<div class="blank-row"><p>割引候補を読み込んでいます。</p></div>`;
+      }
+
+      function showShoppingLoadError() {
+        state.syncLoading = false;
+        state.syncFailed = true;
+        els.syncStatus.hidden = false;
+        els.syncText.textContent = "買い物情報を読み込めませんでした";
+        els.reloadButton.hidden = false;
+        [els.dailyBudgetEstimate, els.plannedShoppingTotal, els.plannedRemaining].forEach((node) => {
+          node.classList.remove("loading-value");
+          node.textContent = "-";
+        });
+        els.plannedWarning.hidden = true;
+        els.plannedRemainingCard.classList.remove("is-over");
+        els.count.textContent = "-";
+        els.candidateCount.textContent = "-";
+        els.list.innerHTML = `<div class="blank-row"><p>再読み込みしてください。</p></div>`;
+        els.candidates.innerHTML = `<div class="blank-row"><p>再読み込みしてください。</p></div>`;
+      }
+
+      async function supabaseRequest(path, options = {}) {
+        const session = await refreshSessionIfNeeded();
+        if (!session?.access_token) throw new Error("Not signed in");
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+          ...options,
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+          }
+        });
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || `Supabase request failed: ${response.status}`);
+        }
+        if (response.status === 204) return null;
+        const text = await response.text();
+        return text ? JSON.parse(text) : null;
+      }
+
+      function shoppingItemToRow(item) {
+        return {
+          id: item.id,
+          user_id: currentUserId(),
+          title: item.title,
+          amount: item.amount || null,
+          category: item.category,
+          store_name: item.storeName || null,
+          store_label: item.storeLabel || null,
+          source_discount_id: item.sourceDiscountId || null,
+          checked: Boolean(item.checked)
+        };
+      }
+
+      function rowToShoppingItem(row) {
+        return {
+          id: row.id,
+          title: row.title,
+          amount: row.amount == null ? 0 : Number(row.amount),
+          category: row.category,
+          storeName: row.store_name || "",
+          storeLabel: row.store_label || "",
+          sourceDiscountId: row.source_discount_id || "",
+          checked: Boolean(row.checked)
+        };
+      }
+
+      async function loadShoppingFromSupabase() {
+        if (!currentUserId()) return;
+        const rows = await supabaseRequest(`${HOUSEHOLD_SHOPPING_TABLE}?select=*&order=created_at.desc`);
+        state.shoppingItems = (rows || []).map(rowToShoppingItem);
+        saveShoppingItems();
+      }
+
+      async function migrateShoppingLocalIfRemoteEmpty() {
+        if (!currentUserId()) return;
+        const remoteRows = await supabaseRequest(`${HOUSEHOLD_SHOPPING_TABLE}?select=id&limit=1`);
+        if (!remoteRows?.length && state.shoppingItems.length) {
+          await supabaseRequest(HOUSEHOLD_SHOPPING_TABLE, {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+            body: JSON.stringify(state.shoppingItems.map(shoppingItemToRow))
+          });
+        }
+      }
+
+      async function syncShoppingItem(item) {
+        if (!currentUserId()) return;
+        await supabaseRequest(HOUSEHOLD_SHOPPING_TABLE, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify(shoppingItemToRow(item))
+        });
+      }
+
+      async function deleteShoppingItemFromSupabase(id) {
+        if (!currentUserId()) return;
+        await supabaseRequest(`${HOUSEHOLD_SHOPPING_TABLE}?id=eq.${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: { Prefer: "return=minimal" }
+        });
+      }
+
+      function recurringItemToRow(item) {
+        return {
+          id: item.id,
+          user_id: currentUserId(),
+          title: item.title,
+          frequency_days: item.frequencyDays,
+          estimated_amount: item.estimatedAmount || null,
+          last_purchased_date: item.lastPurchasedDate,
+          active: item.active !== false
+        };
+      }
+
+      function rowToRecurringItem(row) {
+        return {
+          id: row.id,
+          title: row.title,
+          frequencyDays: Number(row.frequency_days) || 1,
+          estimatedAmount: row.estimated_amount == null ? 0 : Number(row.estimated_amount),
+          lastPurchasedDate: row.last_purchased_date,
+          active: row.active !== false
+        };
+      }
+
+      async function loadRecurringFromSupabase() {
+        if (!currentUserId()) return;
+        const rows = await supabaseRequest(`${HOUSEHOLD_RECURRING_TABLE}?select=*&order=created_at.desc`);
+        state.recurringItems = (rows || []).map(rowToRecurringItem);
+        saveRecurringItems();
+      }
+
+      async function migrateRecurringLocalIfRemoteEmpty() {
+        if (!currentUserId()) return;
+        const remoteRows = await supabaseRequest(`${HOUSEHOLD_RECURRING_TABLE}?select=id&limit=1`);
+        if (!remoteRows?.length && state.recurringItems.length) {
+          await supabaseRequest(HOUSEHOLD_RECURRING_TABLE, {
+            method: "POST",
+            headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+            body: JSON.stringify(state.recurringItems.map(recurringItemToRow))
+          });
+        }
+      }
+
+      async function syncRecurringItem(item) {
+        if (!currentUserId()) return;
+        await supabaseRequest(HOUSEHOLD_RECURRING_TABLE, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify(recurringItemToRow(item))
+        });
+      }
+
+      async function deleteRecurringItemFromSupabase(id) {
+        if (!currentUserId()) return;
+        await supabaseRequest(`${HOUSEHOLD_RECURRING_TABLE}?id=eq.${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: { Prefer: "return=minimal" }
+        });
+      }
+
+      function saveShoppingItems() {
+        localStorage.setItem(SHOPPING_KEY, JSON.stringify(state.shoppingItems));
+      }
+
+      function saveRecurringItems() {
+        localStorage.setItem(RECURRING_KEY, JSON.stringify(state.recurringItems));
+      }
+
+      function loadExpenses() {
+        return loadJson(EXPENSES_KEY, []);
+      }
+
+      function saveExpenses(expenses) {
+        localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+      }
+
+      function householdRecordToRow(item) {
+        return {
+          id: item.id,
+          user_id: currentUserId(),
+          record_type: "expense",
+          record_date: item.date,
+          category: item.category,
+          title: item.title,
+          amount: item.amount
+        };
+      }
+
+      async function syncHouseholdExpense(item) {
+        if (!currentUserId()) return;
+        await supabaseRequest(HOUSEHOLD_RECORDS_TABLE, {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify(householdRecordToRow(item))
+        });
+      }
+
+      async function addHouseholdExpenseFromShopping(item, options = {}) {
+        const amount = Math.max(0, Number(options.amount ?? item.amount ?? item.estimatedAmount) || 0);
+        if (!item.title || amount <= 0) {
+          showShoppingFeedback(`${item.title || "購入品"}は金額が未入力のため、家計簿には反映していません。`, true);
+          return null;
+        }
+
+        const expenses = loadExpenses();
+        if (item.householdExpenseId && expenses.some((expense) => expense.id === item.householdExpenseId)) {
+          showShoppingFeedback(`${item.title}はすでに家計簿へ反映済みです。`);
+          return expenses.find((expense) => expense.id === item.householdExpenseId);
+        }
+
+        const expense = {
+          id: item.householdExpenseId || crypto.randomUUID(),
+          date: options.date || dateKey(new Date()),
+          category: options.category || item.category || "unknown",
+          title: item.title,
+          amount
+        };
+        item.householdExpenseId = expense.id;
+        saveExpenses([...expenses, expense]);
+
+        try {
+          await syncHouseholdExpense(expense);
+          showShoppingFeedback(`${expense.title}を家計簿に支出として反映しました。`);
+        } catch {
+          showShoppingFeedback(`${expense.title}を家計簿に反映しました。クラウド同期は未完了です。`, true);
+        }
+        return expense;
+      }
+
+      function showShoppingFeedback(message, warning = false) {
+        els.feedback.textContent = message;
+        els.feedback.classList.toggle("is-warning", warning);
+        els.feedback.hidden = false;
+      }
+
+      function loadDiscountCache() {
+        const userId = currentUserId();
+        if (!userId) return [];
+        try {
+          const notes = JSON.parse(localStorage.getItem(`${DISCOUNT_CACHE_KEY_PREFIX}:${userId}`) || "{}");
+          return Object.entries(notes || {}).flatMap(([storeId, items]) => {
+            return (Array.isArray(items) ? items : []).map((item) => ({ ...item, storeId }));
+          });
+        } catch {
+          return [];
+        }
+      }
+
+      function addShoppingItemFromForm(event) {
+        event.preventDefault();
+        const item = {
+          id: crypto.randomUUID(),
+          title: els.title.value.trim(),
+          amount: Math.max(0, Number(els.amount.value) || 0),
+          category: els.category.value,
+          checked: false,
+          storeName: "",
+          storeLabel: "",
+          sourceDiscountId: ""
+        };
+        if (!item.title) return;
+        maybeUpdateRecurringPurchaseFromShopping(item.title);
+        addShoppingItem(item);
+        els.form.reset();
+        els.category.value = "food";
+      }
+
+      function addShoppingItem(item) {
+        state.shoppingItems.unshift(item);
+        saveShoppingItems();
+        syncShoppingItem(item).catch(() => null);
+        render();
+      }
+
+      function addDiscountCandidate(note) {
+        addShoppingItem({
+          id: crypto.randomUUID(),
+          title: note.name || "商品名なし",
+          amount: Math.max(0, Number(note.price) || 0),
+          category: guessShoppingCategory(note),
+          checked: false,
+          storeName: note.storeName || "",
+          storeLabel: note.storeLabel || note.storeName || "",
+          sourceDiscountId: note.id || ""
+        });
+      }
+
+      async function toggleShoppingItem(id, checked) {
+        const item = state.shoppingItems.find((entry) => entry.id === id);
+        if (!item) return;
+        item.checked = checked;
+        if (checked) {
+          await addHouseholdExpenseFromShopping(item);
+        } else {
+          showShoppingFeedback(`${item.title}を未購入に戻しました。家計簿に反映済みの支出は残しています。`);
+        }
+        saveShoppingItems();
+        syncShoppingItem(item).catch(() => null);
+        renderBudgetSummary();
+        renderShopping();
+      }
+
+      function deleteShoppingItem(id) {
+        state.shoppingItems = state.shoppingItems.filter((item) => item.id !== id);
+        saveShoppingItems();
+        deleteShoppingItemFromSupabase(id).catch(() => null);
+        renderBudgetSummary();
+        renderShopping();
+      }
+
+      function addRecurringItemFromForm(event) {
+        event.preventDefault();
+        const item = {
+          id: crypto.randomUUID(),
+          title: els.recurringTitle.value.trim(),
+          frequencyDays: Math.max(1, Number(els.recurringFrequency.value) || 1),
+          estimatedAmount: Math.max(0, Number(els.recurringAmount.value) || 0),
+          lastPurchasedDate: els.recurringLastDate.value,
+          active: true
+        };
+        if (!item.title || !item.lastPurchasedDate) return;
+        state.recurringItems.unshift(item);
+        saveRecurringItems();
+        syncRecurringItem(item).catch(() => null);
+        els.recurringForm.reset();
+        els.recurringLastDate.value = dateKey(new Date());
+        renderRecurring();
+      }
+
+      async function markRecurringPurchased(id) {
+        const item = state.recurringItems.find((entry) => entry.id === id);
+        if (!item) return;
+        const today = dateKey(new Date());
+        if (item.lastHouseholdExpenseDate !== today) {
+          item.householdExpenseId = "";
+        }
+        await addHouseholdExpenseFromShopping(item, {
+          amount: item.estimatedAmount,
+          category: "daily",
+          date: today
+        });
+        item.lastHouseholdExpenseDate = today;
+        item.lastPurchasedDate = today;
+        saveRecurringItems();
+        syncRecurringItem(item).catch(() => null);
+        renderRecurring();
+      }
+
+      function maybeUpdateRecurringPurchaseFromShopping(title) {
+        const normalizedTitle = normalizeItemName(title);
+        const matched = state.recurringItems.find((item) => {
+          return item.active !== false && normalizeItemName(item.title) === normalizedTitle;
+        });
+        if (!matched) return;
+        if (confirm(`${matched.title}は繰り返し購入品に登録されています。最終購入日を今日に更新しますか？`)) {
+          markRecurringPurchased(matched.id);
+        }
+      }
+
+      function deleteRecurringItem(id) {
+        state.recurringItems = state.recurringItems.filter((item) => item.id !== id);
+        saveRecurringItems();
+        deleteRecurringItemFromSupabase(id).catch(() => null);
+        renderRecurring();
+      }
+
+      function moveRecurringMonth(delta) {
+        state.recurringViewDate = new Date(
+          state.recurringViewDate.getFullYear(),
+          state.recurringViewDate.getMonth() + delta,
+          1
+        );
+        renderRecurringCalendar();
+      }
+
+      function render() {
+        if (state.syncLoading) return;
+        state.discounts = loadDiscountCache();
+        renderBudgetSummary();
+        renderShopping();
+        renderDiscountCandidates();
+        renderRecurring();
+      }
+
+      function renderQuickAdd() {
+        els.quickItemChips.innerHTML = quickItems.map((item) => {
+          return `<button class="quick-chip" type="button" data-title="${escapeHtml(item.title)}" data-category="${escapeHtml(item.category)}" data-amount="${item.amount}">${escapeHtml(item.title)}</button>`;
+        }).join("");
+        els.quickAmountChips.innerHTML = quickAmounts.map((amount) => {
+          return `<button class="amount-chip" type="button" data-amount="${amount}">${yen.format(amount)}</button>`;
+        }).join("");
+        els.quickItemChips.querySelectorAll("button").forEach((button) => {
+          button.addEventListener("click", () => {
+            els.title.value = button.dataset.title || "";
+            els.category.value = button.dataset.category || "food";
+            if (!els.amount.value) els.amount.value = button.dataset.amount || "";
+            els.title.focus();
+          });
+        });
+        els.quickAmountChips.querySelectorAll("button").forEach((button) => {
+          button.addEventListener("click", () => {
+            els.amount.value = button.dataset.amount || "";
+            els.amount.focus();
+          });
+        });
+      }
+
+      function renderBudgetSummary() {
+        if (state.syncLoading) return;
+        [els.dailyBudgetEstimate, els.plannedShoppingTotal, els.plannedRemaining].forEach((node) => {
+          node.classList.remove("loading-value");
+        });
+        const daily = todayBudgetEstimate();
+        const planned = state.shoppingItems
+          .filter((item) => !item.checked)
+          .reduce((total, item) => total + Math.max(0, Number(item.amount) || 0), 0);
+        const remaining = daily - planned;
+        els.dailyBudgetEstimate.textContent = yen.format(daily);
+        els.plannedShoppingTotal.textContent = yen.format(planned);
+        els.plannedRemaining.textContent = yen.format(remaining);
+        els.plannedRemainingCard.classList.toggle("is-over", remaining < 0);
+        if (remaining < 0) {
+          els.plannedWarning.textContent = `今日の目安を${yen.format(Math.abs(remaining))}超えています`;
+          els.plannedWarning.hidden = false;
+        } else {
+          els.plannedWarning.textContent = "";
+          els.plannedWarning.hidden = true;
+        }
+      }
+
+      function todayBudgetEstimate() {
+        const today = new Date();
+        const budget = budgetForMonth(today);
+        const spent = currentMonthExpenseTotal(today);
+        const remaining = budget - spent;
+        const remainingDays = remainingDaysInMonth(today);
+        return Math.floor(Math.max(0, remaining) / remainingDays);
+      }
+
+      function budgetForMonth(date) {
+        const budgets = loadJson(MONTHLY_BUDGETS_KEY, {});
+        return Number(budgets[monthKey(date)]) || Number(localStorage.getItem(LEGACY_BUDGET_KEY)) || 50000;
+      }
+
+      function currentMonthExpenseTotal(date) {
+        const expenses = loadJson(EXPENSES_KEY, []);
+        const fixedCosts = loadJson(FIXED_COSTS_KEY, []);
+        const variable = expenses
+          .filter((expense) => {
+            const expenseDate = parseDate(expense.date);
+            return expenseDate && expenseDate.getFullYear() === date.getFullYear() && expenseDate.getMonth() === date.getMonth();
+          })
+          .reduce((total, expense) => total + Math.max(0, Number(expense.amount) || 0), 0);
+        const fixed = fixedCosts
+          .filter((item) => item.active !== false)
+          .reduce((total, item) => total + Math.max(0, Number(item.amount) || 0), 0);
+        return variable + fixed;
+      }
+
+      function remainingDaysInMonth(date) {
+        const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        return Math.max(1, daysInMonth - date.getDate() + 1);
+      }
+
+      function monthKey(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      }
+
+      function renderShopping() {
+        if (state.syncLoading) return;
+        const activeItems = [...state.shoppingItems].sort((a, b) => Number(a.checked) - Number(b.checked));
+        els.count.textContent = `${activeItems.filter((item) => !item.checked).length}件`;
+        els.list.innerHTML = "";
+        if (!activeItems.length) {
+          const empty = els.emptyTemplate.content.cloneNode(true);
+          empty.querySelector("p").textContent = "買い物メモはまだありません。必要なものを追加してください。";
+          els.list.append(empty);
+          return;
+        }
+        activeItems.forEach((item) => {
+          const category = categories.find((entry) => entry.id === item.category) || categories.at(-1);
+          const row = document.createElement("article");
+          row.className = `shopping-item ${item.checked ? "is-done" : ""}`;
+          row.innerHTML = `
+            <label class="shopping-check">
+              <input type="checkbox" ${item.checked ? "checked" : ""}>
+              <span class="shopping-main">
+                <strong>${escapeHtml(item.title)}</strong>
+                <span class="shopping-meta">
+                  ${item.amount ? `${yen.format(item.amount)} / ` : ""}${escapeHtml(item.storeLabel || item.storeName || category.label)}
+                </span>
+              </span>
+            </label>
+            <button class="delete-button" type="button" aria-label="${escapeHtml(item.title)}を削除">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7l1-3h4l1 3"/>
+              </svg>
+            </button>
+          `;
+          row.querySelector("input").addEventListener("change", (event) => {
+            toggleShoppingItem(item.id, event.target.checked);
+          });
+          row.querySelector("button").addEventListener("click", () => deleteShoppingItem(item.id));
+          els.list.append(row);
+        });
+      }
+
+      function renderDiscountCandidates() {
+        if (state.syncLoading) return;
+        const candidates = state.discounts
+          .filter((note) => note?.name)
+          .sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
+          .slice(0, 12);
+        els.candidateCount.textContent = `${candidates.length}件`;
+        els.candidates.innerHTML = "";
+        if (!currentUserId()) {
+          const empty = els.emptyTemplate.content.cloneNode(true);
+          empty.querySelector("p").textContent = "ログインすると、割引メモに保存した商品が候補に出ます。";
+          els.candidates.append(empty);
+          return;
+        }
+        if (!candidates.length) {
+          const empty = els.emptyTemplate.content.cloneNode(true);
+          empty.querySelector("p").textContent = "割引候補はまだありません。割引メモで商品を保存するとここに表示されます。";
+          els.candidates.append(empty);
+          return;
+        }
+        candidates.forEach((note) => {
+          const row = document.createElement("article");
+          row.className = "discount-candidate";
+          row.innerHTML = `
+            <div class="candidate-main">
+              <strong>${escapeHtml(note.name)}</strong>
+              <small>${escapeHtml(note.storeLabel || note.storeName || "店舗未設定")} / ${scheduleLabel(note)}</small>
+            </div>
+            <div class="candidate-actions">
+              <span class="price-pill">${yen.format(Number(note.price || 0))}</span>
+              <button type="button">追加</button>
+            </div>
+          `;
+          row.querySelector("button").addEventListener("click", () => addDiscountCandidate(note));
+          els.candidates.append(row);
+        });
+      }
+
+      function renderRecurring() {
+        renderRecurringCalendar();
+        renderRecurringList();
+      }
+
+      function renderRecurringCalendar() {
+        const year = state.recurringViewDate.getFullYear();
+        const month = state.recurringViewDate.getMonth();
+        els.recurringMonthLabel.textContent = `${year}年${month + 1}月`;
+        els.recurringCalendar.innerHTML = "";
+
+        const first = new Date(year, month, 1);
+        const start = new Date(year, month, 1 - first.getDay());
+        const todayKey = dateKey(new Date());
+        const dueByDate = new Map();
+        state.recurringItems.forEach((item) => {
+          const nextKey = nextPurchaseDate(item);
+          if (!nextKey) return;
+          if (!dueByDate.has(nextKey)) dueByDate.set(nextKey, []);
+          dueByDate.get(nextKey).push(item);
+        });
+
+        for (let index = 0; index < 42; index += 1) {
+          const date = new Date(start);
+          date.setDate(start.getDate() + index);
+          const key = dateKey(date);
+          const dueItems = dueByDate.get(key) || [];
+          const cell = document.createElement("div");
+          cell.className = [
+            "mini-day",
+            date.getMonth() !== month ? "is-muted" : "",
+            key === todayKey ? "is-today" : "",
+            dueItems.length ? "has-due" : ""
+          ].filter(Boolean).join(" ");
+          cell.innerHTML = `
+            <span>${date.getDate()}</span>
+            ${dueItems.slice(0, 2).map((item) => `<span class="due-dot">${escapeHtml(item.title)}</span>`).join("")}
+          `;
+          els.recurringCalendar.append(cell);
+        }
+      }
+
+      function renderRecurringList() {
+        const items = [...state.recurringItems].sort((a, b) => {
+          return String(nextPurchaseDate(a)).localeCompare(String(nextPurchaseDate(b)));
+        });
+        els.recurringCount.textContent = `${items.length}件`;
+        els.recurringList.innerHTML = "";
+        if (!items.length) {
+          const empty = els.emptyTemplate.content.cloneNode(true);
+          empty.querySelector("p").textContent = "繰り返し購入品はまだありません。買う周期があるものを登録してください。";
+          els.recurringList.append(empty);
+          return;
+        }
+        items.forEach((item) => {
+          const nextKey = nextPurchaseDate(item);
+          const row = document.createElement("article");
+          row.className = "recurring-item";
+          row.innerHTML = `
+            <div class="candidate-main">
+              <strong>${escapeHtml(item.title)}</strong>
+              <small>${item.frequencyDays}日ごと${item.estimatedAmount ? ` / ${yen.format(item.estimatedAmount)}` : ""} / 最後: ${formatDateLabel(item.lastPurchasedDate)} / 次回: ${formatDateLabel(nextKey)}</small>
+            </div>
+            <div class="recurring-actions">
+              <button type="button" data-action="purchased">買った</button>
+              <button type="button" data-action="delete">削除</button>
+            </div>
+          `;
+          row.querySelector('[data-action="purchased"]').addEventListener("click", () => markRecurringPurchased(item.id));
+          row.querySelector('[data-action="delete"]').addEventListener("click", () => deleteRecurringItem(item.id));
+          els.recurringList.append(row);
+        });
+      }
+
+      function scheduleLabel(note) {
+        if (note.saleMode === "weekly") return "毎週";
+        if (note.saleMode === "monthly") return "毎月";
+        if (note.saleMode === "range") return `${note.saleDate || "開始日未設定"}〜${note.saleEndDate || "終了日未設定"}`;
+        return note.saleDate || "日付未設定";
+      }
+
+      function guessShoppingCategory(note) {
+        const text = `${note.name || ""} ${note.storeType || ""}`;
+        if (/薬|日用|洗剤|紙|衛生|ドラッグ/.test(text)) return "daily";
+        if (/文具|本|学|ノート|ペン/.test(text)) return "study";
+        return "food";
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;"
+        }[char]));
+      }
+
+      function nextPurchaseDate(item) {
+        const last = parseDate(item.lastPurchasedDate);
+        if (!last) return "";
+        last.setDate(last.getDate() + Math.max(1, Number(item.frequencyDays) || 1));
+        return dateKey(last);
+      }
+
+      function parseDate(value) {
+        if (!value) return null;
+        const [year, month, day] = String(value).split("-").map(Number);
+        if (!year || !month || !day) return null;
+        return new Date(year, month - 1, day);
+      }
+
+      function dateKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function formatDateLabel(value) {
+        const date = parseDate(value);
+        if (!date) return "未設定";
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+      }
+
+      function normalizeItemName(value) {
+        return String(value || "")
+          .normalize("NFKC")
+          .replace(/\s+/g, "")
+          .toLowerCase();
+      }
+    </script>
+  </body>
+</html>
