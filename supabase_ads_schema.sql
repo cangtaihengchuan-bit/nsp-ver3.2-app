@@ -24,11 +24,21 @@ $$;
 create table if not exists public.stores (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  external_key text unique,
   profile text,
   contact_note text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.stores
+  add column if not exists external_key text;
+
+do $$ begin
+  alter table public.stores add constraint stores_external_key_unique unique (external_key);
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists public.store_members (
   store_id uuid not null references public.stores(id) on delete cascade,
@@ -48,6 +58,15 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
+create or replace function public.can_view_store(target_store_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_app_developer() or exists (
+    select 1 from public.store_members
+    where store_id = target_store_id
+      and user_id = auth.uid()
+  );
+$$;
+
 create or replace function public.can_manage_store_path(object_name text)
 returns boolean language plpgsql stable security definer set search_path = public as $$
 declare target_store_id uuid;
@@ -60,6 +79,7 @@ end; $$;
 create table if not exists public.store_branches (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
+  external_key text unique,
   name text not null,
   address text,
   latitude double precision,
@@ -68,6 +88,15 @@ create table if not exists public.store_branches (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.store_branches
+  add column if not exists external_key text;
+
+do $$ begin
+  alter table public.store_branches add constraint store_branches_external_key_unique unique (external_key);
+exception
+  when duplicate_object then null;
+end $$;
 
 do $$ begin
   create type public.ad_campaign_status as enum ('draft', 'submitted', 'approved', 'scheduled', 'active', 'paused', 'ended', 'rejected');
@@ -78,6 +107,7 @@ create table if not exists public.ad_campaigns (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
   branch_id uuid references public.store_branches(id) on delete set null,
+  external_key text unique,
   store_name text not null default '',
   branch_name text,
   branch_map_url text,
@@ -116,10 +146,17 @@ create table if not exists public.ad_campaigns (
 
 alter table public.ad_campaigns
   add column if not exists store_name text not null default '',
+  add column if not exists external_key text,
   add column if not exists branch_name text,
   add column if not exists branch_map_url text,
   add column if not exists branch_latitude double precision,
   add column if not exists branch_longitude double precision;
+
+do $$ begin
+  alter table public.ad_campaigns add constraint ad_campaigns_external_key_unique unique (external_key);
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists public.ad_campaign_targets (
   id uuid primary key default gen_random_uuid(),
@@ -179,6 +216,9 @@ create table if not exists public.feature_flags (
 );
 
 create index if not exists ad_campaigns_store_status_idx on public.ad_campaigns(store_id, status, starts_at, ends_at);
+create unique index if not exists stores_external_key_uidx on public.stores(external_key) where external_key is not null;
+create unique index if not exists store_branches_external_key_uidx on public.store_branches(external_key) where external_key is not null;
+create unique index if not exists ad_campaigns_external_key_uidx on public.ad_campaigns(external_key) where external_key is not null;
 create index if not exists campaign_events_campaign_day_idx on public.campaign_events(campaign_id, event_day, event_type);
 create index if not exists store_branches_store_idx on public.store_branches(store_id);
 
@@ -201,6 +241,28 @@ begin
   return new;
 end; $$;
 
+create or replace function public.enforce_campaign_store_integrity()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare branch_store_id uuid;
+begin
+  if new.branch_id is not null then
+    select store_id into branch_store_id from public.store_branches where id = new.branch_id;
+    if branch_store_id is null or branch_store_id <> new.store_id then
+      raise exception 'branch must belong to campaign store';
+    end if;
+  end if;
+  if new.sale_price is not null and new.regular_price is not null and new.sale_price > new.regular_price then
+    raise exception 'sale price must not exceed regular price';
+  end if;
+  if length(new.product_name) > 80 then
+    raise exception 'product name is too long';
+  end if;
+  if length(new.headline) > 90 then
+    raise exception 'headline is too long';
+  end if;
+  return new;
+end; $$;
+
 drop trigger if exists app_roles_updated_at on public.app_roles;
 create trigger app_roles_updated_at before update on public.app_roles for each row execute function public.set_updated_at();
 drop trigger if exists stores_updated_at on public.stores;
@@ -211,6 +273,8 @@ drop trigger if exists ad_campaigns_updated_at on public.ad_campaigns;
 create trigger ad_campaigns_updated_at before update on public.ad_campaigns for each row execute function public.set_updated_at();
 drop trigger if exists enforce_campaign_status_transition on public.ad_campaigns;
 create trigger enforce_campaign_status_transition before insert or update on public.ad_campaigns for each row execute function public.enforce_campaign_status_transition();
+drop trigger if exists enforce_campaign_store_integrity on public.ad_campaigns;
+create trigger enforce_campaign_store_integrity before insert or update on public.ad_campaigns for each row execute function public.enforce_campaign_store_integrity();
 
 -- State transitions that change review status always go through these RPC functions.
 create or replace function public.submit_campaign(target_campaign_id uuid)
@@ -268,6 +332,133 @@ begin
   return result;
 end; $$;
 
+create or replace function public.active_ad_campaigns()
+returns setof public.ad_campaigns
+language sql stable security definer set search_path = public as $$
+  select *
+  from public.ad_campaigns
+  where status in ('approved', 'scheduled', 'active')
+    and starts_at <= now()
+    and ends_at >= now()
+  order by starts_at desc
+  limit 50;
+$$;
+
+create or replace function public.is_active_campaign(target_campaign_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+    from public.ad_campaigns
+    where id = target_campaign_id
+      and status in ('approved', 'scheduled', 'active')
+      and starts_at <= now()
+      and ends_at >= now()
+  );
+$$;
+
+create or replace function public.create_debug_sample_campaign()
+returns public.ad_campaigns
+language plpgsql security definer set search_path = public as $$
+declare
+  sample_store_id uuid;
+  sample_branch_id uuid;
+  result public.ad_campaigns;
+begin
+  if not public.is_app_developer() then raise exception 'developer role required'; end if;
+
+  insert into public.stores(external_key, name, profile, contact_note)
+  values (
+    'sample-supermarket-1',
+    '駅前サンプルスーパー',
+    'ユーザー向けの「サンプルで試す」に表示される駅前サンプルスーパーです。',
+    'debug sample'
+  )
+  on conflict (external_key) do update
+    set name = excluded.name,
+        profile = excluded.profile,
+        contact_note = excluded.contact_note
+  returning id into sample_store_id;
+
+  insert into public.store_branches(external_key, store_id, name, address, latitude, longitude, map_url)
+  values (
+    'sample-supermarket-1:station',
+    sample_store_id,
+    '駅前店',
+    '駅前通り 1-2-3',
+    35.681236,
+    139.767125,
+    'https://www.google.com/maps/search/?api=1&query=%E9%A7%85%E5%89%8D%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B9%E3%83%BC%E3%83%91%E3%83%BC'
+  )
+  on conflict (external_key) do update
+    set store_id = excluded.store_id,
+        name = excluded.name,
+        address = excluded.address,
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        map_url = excluded.map_url
+  returning id into sample_branch_id;
+
+  perform set_config('app.campaign_transition', 'allowed', true);
+  insert into public.ad_campaigns(
+    external_key, store_id, branch_id, store_name, branch_name, branch_map_url,
+    branch_latitude, branch_longitude, product_name, headline, regular_price,
+    sale_price, discount_conditions, starts_at, ends_at, category,
+    delivery_radius_km, stock_note, user_notice, status, submitted_at
+  )
+  values (
+    'debug-sample-campaign',
+    sample_store_id,
+    sample_branch_id,
+    '駅前サンプルスーパー',
+    '駅前店',
+    'https://www.google.com/maps/search/?api=1&query=%E9%A7%85%E5%89%8D%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B9%E3%83%BC%E3%83%91%E3%83%BC',
+    35.681236,
+    139.767125,
+    '牛乳 1L',
+    '駅前サンプルスーパーの牛乳セール',
+    248,
+    198,
+    'お一人様2点まで',
+    now(),
+    now() + interval '14 days',
+    'food',
+    5,
+    '在庫状況は店舗でご確認ください',
+    'ユーザー向けサンプル店舗と結びついたデバッグ用広告です。',
+    'submitted',
+    now()
+  )
+  on conflict (external_key) do update
+    set store_id = excluded.store_id,
+        branch_id = excluded.branch_id,
+        store_name = excluded.store_name,
+        branch_name = excluded.branch_name,
+        branch_map_url = excluded.branch_map_url,
+        branch_latitude = excluded.branch_latitude,
+        branch_longitude = excluded.branch_longitude,
+        product_name = excluded.product_name,
+        headline = excluded.headline,
+        regular_price = excluded.regular_price,
+        sale_price = excluded.sale_price,
+        discount_conditions = excluded.discount_conditions,
+        starts_at = excluded.starts_at,
+        ends_at = excluded.ends_at,
+        category = excluded.category,
+        delivery_radius_km = excluded.delivery_radius_km,
+        stock_note = excluded.stock_note,
+        user_notice = excluded.user_notice,
+        status = 'submitted',
+        submitted_at = now(),
+        rejection_reason = null
+  returning * into result;
+
+  insert into public.audit_logs(actor_id, action, entity_type, entity_id, detail)
+  values (auth.uid(), 'debug_sample_submitted', 'campaign', result.id, jsonb_build_object('external_key', result.external_key));
+
+  return result;
+end; $$;
+
 create or replace function public.store_campaign_metrics(target_store_id uuid)
 returns table(campaign_id uuid, impressions bigint, detail_views bigint, discount_saves bigint, shopping_adds bigint, map_opens bigint, hides bigint)
 language sql stable security definer set search_path = public as $$
@@ -310,12 +501,16 @@ alter table public.feature_flags enable row level security;
 -- Roles can only be read by their owner. No browser-side role update policy exists.
 drop policy if exists "read own app role" on public.app_roles;
 drop policy if exists "developer reads stores" on public.stores;
+drop policy if exists "members read own stores" on public.stores;
+drop policy if exists "developers manage stores" on public.stores;
 drop policy if exists "store members read own membership" on public.store_members;
 drop policy if exists "store members read own branches" on public.store_branches;
+drop policy if exists "developers manage branches" on public.store_branches;
 drop policy if exists "store members edit own branches" on public.store_branches;
 drop policy if exists "store members edit own stores" on public.stores;
 drop policy if exists "campaign owner manages own store" on public.ad_campaigns;
 drop policy if exists "users read active approved ads" on public.ad_campaigns;
+drop policy if exists "developers manage campaigns" on public.ad_campaigns;
 drop policy if exists "campaign targets managed by owner" on public.ad_campaign_targets;
 drop policy if exists "users read active campaign targets" on public.ad_campaign_targets;
 drop policy if exists "developers read campaign reviews" on public.ad_campaign_reviews;
@@ -327,29 +522,30 @@ drop policy if exists "authenticated writes sanitized errors" on public.app_erro
 drop policy if exists "developers read errors" on public.app_error_logs;
 drop policy if exists "developers manage flags" on public.feature_flags;
 create policy "read own app role" on public.app_roles for select to authenticated using (user_id = auth.uid() or public.is_app_developer());
-create policy "developer reads stores" on public.stores for select to authenticated using (public.is_app_developer() or public.can_manage_store(id));
+create policy "members read own stores" on public.stores for select to authenticated using (public.can_view_store(id));
+create policy "developers manage stores" on public.stores for all to authenticated using (public.is_app_developer()) with check (public.is_app_developer());
 create policy "store members read own membership" on public.store_members for select to authenticated using (user_id = auth.uid() or public.is_app_developer());
-create policy "store members read own branches" on public.store_branches for select to authenticated using (public.can_manage_store(store_id));
+create policy "store members read own branches" on public.store_branches for select to authenticated using (public.can_view_store(store_id));
+create policy "developers manage branches" on public.store_branches for all to authenticated using (public.is_app_developer()) with check (public.is_app_developer());
 create policy "store members edit own branches" on public.store_branches for all to authenticated using (public.can_manage_store(store_id)) with check (public.can_manage_store(store_id));
 create policy "store members edit own stores" on public.stores for update to authenticated using (public.can_manage_store(id)) with check (public.can_manage_store(id));
 
--- Store members can only manage campaigns belonging to their store. A user can only read live ads.
+-- Store members can only manage campaigns belonging to their store. User-facing
+-- live ads are exposed through active_ad_campaigns(), not direct table select.
+create policy "developers manage campaigns" on public.ad_campaigns for all to authenticated using (public.is_app_developer()) with check (public.is_app_developer());
 create policy "campaign owner manages own store" on public.ad_campaigns for all to authenticated using (public.can_manage_store(store_id)) with check (public.can_manage_store(store_id));
-create policy "users read active approved ads" on public.ad_campaigns for select to authenticated using (
-  status in ('approved', 'scheduled', 'active') and starts_at <= now() and ends_at >= now()
-);
 create policy "campaign targets managed by owner" on public.ad_campaign_targets for all to authenticated using (
   exists (select 1 from public.ad_campaigns c where c.id = campaign_id and public.can_manage_store(c.store_id))
 ) with check (exists (select 1 from public.ad_campaigns c where c.id = campaign_id and public.can_manage_store(c.store_id)));
 create policy "users read active campaign targets" on public.ad_campaign_targets for select to authenticated using (
-  exists (select 1 from public.ad_campaigns c where c.id = campaign_id and c.status in ('approved', 'scheduled', 'active') and c.starts_at <= now() and c.ends_at >= now())
+  public.is_active_campaign(campaign_id)
 );
 create policy "developers read campaign reviews" on public.ad_campaign_reviews for select to authenticated using (public.is_app_developer());
 create policy "store reads own review results" on public.ad_campaign_reviews for select to authenticated using (exists (select 1 from public.ad_campaigns c where c.id = campaign_id and public.can_manage_store(c.store_id)));
 
 -- Event rows contain aggregate-only fields. Stores receive aggregates through store_campaign_metrics(), never raw rows.
 create policy "authenticated records allowed event" on public.campaign_events for insert to authenticated with check (
-  exists (select 1 from public.ad_campaigns c where c.id = campaign_id and c.status in ('approved', 'scheduled', 'active') and c.starts_at <= now() and c.ends_at >= now())
+  public.is_active_campaign(campaign_id)
 );
 create policy "developer reads aggregate event rows" on public.campaign_events for select to authenticated using (public.is_app_developer());
 create policy "developers read audit logs" on public.audit_logs for select to authenticated using (public.is_app_developer());
@@ -361,7 +557,7 @@ grant usage on schema public to authenticated;
 grant select on public.app_roles, public.stores, public.store_members, public.store_branches, public.ad_campaigns, public.ad_campaign_targets, public.ad_campaign_reviews to authenticated;
 grant insert, update, delete on public.stores, public.store_branches, public.ad_campaigns, public.ad_campaign_targets to authenticated;
 grant insert on public.campaign_events, public.app_error_logs to authenticated;
-grant execute on function public.current_app_role(), public.is_app_developer(), public.can_manage_store(uuid), public.can_manage_store_path(text), public.submit_campaign(uuid), public.review_campaign(uuid, text, text), public.stop_campaign(uuid), public.store_campaign_metrics(uuid), public.developer_data_counts() to authenticated;
+grant execute on function public.current_app_role(), public.is_app_developer(), public.can_manage_store(uuid), public.can_view_store(uuid), public.can_manage_store_path(text), public.submit_campaign(uuid), public.review_campaign(uuid, text, text), public.stop_campaign(uuid), public.store_campaign_metrics(uuid), public.developer_data_counts(), public.active_ad_campaigns(), public.is_active_campaign(uuid), public.create_debug_sample_campaign() to authenticated;
 
 -- Optional campaign image storage. The object path always begins with the owning store UUID.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

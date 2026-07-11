@@ -117,8 +117,7 @@
     }
     list.innerHTML = `<p class="store-ad-empty">広告を読み込んでいます。</p>`;
     try {
-      const now = new Date().toISOString();
-      const rows = await A.request(`ad_campaigns?select=*&status=in.(approved,scheduled,active)&starts_at=lte.${encodeURIComponent(now)}&ends_at=gte.${encodeURIComponent(now)}&order=starts_at.desc&limit=12`);
+      const rows = await A.rpc("active_ad_campaigns");
       const campaigns = rows.filter(canShow).filter((item) => A.localImpressionAllowed(item.id)).slice(0, 3);
       if (!campaigns.length) {
         list.innerHTML = `<p class="store-ad-empty">この地点の範囲で配信中の広告はありません。</p>`;
