@@ -14,7 +14,7 @@ SQL Editor で `supabase_ads_schema.sql` の全内容を実行します。
 
 - 店舗画面の直接テーブル参照は、所属している契約店舗のデータだけに制限します。
 - ユーザー向け広告表示は `registered_store_ad_campaigns()` RPC から取得します。
-- 表示条件は距離ではなく、ログインユーザーの `nsp_user_discounts.store_id` と広告の `ad_campaigns.user_store_id` が一致することです。
+- 表示条件は、ログインユーザーの `nsp_user_discounts.store_id` と広告の `ad_campaigns.user_store_id` が一致することです。
 - 開発者は `create_debug_sample_campaign()` で、駅前サンプルスーパーに紐づく配信中サンプル広告をDBへ作成できます。
 
 ## 2. Supabase AuthのユーザーIDを確認する
