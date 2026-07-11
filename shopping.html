@@ -1192,6 +1192,7 @@
         } else {
           localStorage.removeItem(SESSION_KEY);
         }
+        window.dispatchEvent(new CustomEvent("kaimono-clock-auth-change", { detail: { signedIn: Boolean(session?.access_token) } }));
         renderSessionPill();
       }
 

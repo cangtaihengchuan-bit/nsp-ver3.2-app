@@ -6,6 +6,11 @@
   const MODE_KEY = "kaimono-clock-special-mode";
   const VERSION = "3.2.0";
 
+  function exitSpecialMode() {
+    localStorage.removeItem(MODE_KEY);
+    location.replace("./index.html");
+  }
+
   function session() {
     try {
       const value = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -121,5 +126,5 @@
     return ["approved", "scheduled", "active"].includes(campaign.status) && start <= now && end >= now;
   }
 
-  window.KaimonoAds = { SUPABASE_URL, SUPABASE_ANON_KEY, VERSION, session, request, rpc, role, requireRole, escapeHtml, mask, yen, localImpressionAllowed, track, logError, uploadCampaignImage, campaignImageUrl, activeNow };
+  window.KaimonoAds = { SUPABASE_URL, SUPABASE_ANON_KEY, VERSION, session, request, rpc, role, requireRole, exitSpecialMode, escapeHtml, mask, yen, localImpressionAllowed, track, logError, uploadCampaignImage, campaignImageUrl, activeNow };
 })();
