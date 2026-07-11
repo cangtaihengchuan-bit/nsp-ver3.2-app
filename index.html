@@ -610,12 +610,14 @@
         {
           email: "debug@kaimono.local",
           password: "debug-mode",
+          role: "developer",
           status: "デバッグモードへ移動します",
           href: "./debug.html"
         },
         {
           email: "store@kaimono.local",
           password: "store-mode",
+          role: "store",
           status: "店舗側モードへ移動します",
           href: "./store.html"
         }
@@ -718,10 +720,11 @@
         if (specialMode) {
           elements.authDot.className = "dot ready";
           elements.authStatus.textContent = specialMode.status;
-          localStorage.setItem("kaimono-clock-special-mode", specialMode.href);
+          localStorage.setItem("kaimono-clock-special-mode", specialMode.role);
           location.href = specialMode.href;
           return;
         }
+        localStorage.removeItem("kaimono-clock-special-mode");
         renderAuth("確認中...");
         try {
           const data = await authRequest("token?grant_type=password", {
@@ -747,6 +750,7 @@
           }).catch(() => null);
         }
         saveSession(null);
+        localStorage.removeItem("kaimono-clock-special-mode");
       });
 
       restoreSession();
