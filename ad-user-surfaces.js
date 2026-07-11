@@ -114,6 +114,7 @@
       try {
         return await A.rpc("active_ad_campaigns");
       } catch {
+        error.adSchemaMissing = /registered_store_ad_campaigns|active_ad_campaigns|user_store_id|Could not find/i.test(error.message || "");
         throw error;
       }
     }
@@ -225,7 +226,7 @@
         A.logError(PAGE, "load_store_ads_fallback", error);
         return;
       }
-      list.innerHTML = `<p class="store-ad-empty">店舗からのお知らせを読み込めませんでした。</p>`;
+      list.innerHTML = `<p class="store-ad-empty">${error.adSchemaMissing ? "広告表示用のDB設定が未反映です。管理者側で広告表示パッチSQLを実行してください。" : "店舗からのお知らせを読み込めませんでした。"}</p>`;
       A.logError(PAGE, "load_store_ads", error);
     }
   }

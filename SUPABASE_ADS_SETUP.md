@@ -17,6 +17,8 @@ SQL Editor で `supabase_ads_schema.sql` の全内容を実行します。
 - 表示条件は、ログインユーザーの `nsp_user_discounts.store_id` と広告の `ad_campaigns.user_store_id` が一致することです。
 - 開発者は `create_debug_sample_campaign()` で、駅前サンプルスーパーに紐づく配信中サンプル広告をDBへ作成できます。
 
+デバッグ審査では見えるのに一般ユーザーへ表示されない場合は、公開DBに `ad_campaigns.user_store_id` または `registered_store_ad_campaigns()` が未反映の可能性があります。その場合は `supabase_ads_user_visibility_patch.sql` をSQL Editorで実行してください。
+
 ## 2. Supabase AuthのユーザーIDを確認する
 
 ```sql
