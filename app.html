@@ -1980,11 +1980,11 @@
                       <option value="once">単発</option>
                       <option value="weekly">毎週</option>
                       <option value="monthly">毎月</option>
-                      <option value="range">期間割引</option>
+                      <option value="range">期間限定セール</option>
                     </select>
                   </label>
                   <label id="saleDateWrap" class="schedule-label" for="saleDate">
-                    <span>日付 <b id="saleDateRequired" class="required-mark">必須</b></span>
+                    <span id="saleDateLabel">日付 <b id="saleDateRequired" class="required-mark">必須</b></span>
                     <input id="saleDate" class="schedule-field" type="date" required />
                     <span id="saleDateError" class="field-error" aria-live="polite"></span>
                   </label>
@@ -2167,6 +2167,7 @@
         itemPrice: document.querySelector("#itemPrice"),
         saleMode: document.querySelector("#saleMode"),
         saleDateWrap: document.querySelector("#saleDateWrap"),
+        saleDateLabel: document.querySelector("#saleDateLabel"),
         saleDate: document.querySelector("#saleDate"),
         saleDateError: document.querySelector("#saleDateError"),
         saleWeekdayWrap: document.querySelector("#saleWeekdayWrap"),
@@ -2841,6 +2842,7 @@
         elements.saleWeekdayWrap.classList.toggle("hidden", mode !== "weekly");
         elements.saleMonthDayWrap.classList.toggle("hidden", mode !== "monthly");
         elements.saleEndDateWrap.classList.toggle("hidden", mode !== "range");
+        elements.saleDateLabel.innerHTML = `${mode === "range" ? "開始日" : "日付"} <b id="saleDateRequired" class="required-mark">必須</b>`;
         elements.saleDate.required = ["once", "range"].includes(mode);
         elements.saleWeekday.required = mode === "weekly";
         elements.saleMonthDay.required = mode === "monthly";
@@ -3474,7 +3476,7 @@
           const start = parseDateOnly(elements.saleDate.value);
           const end = parseDateOnly(elements.saleEndDate.value);
           if (!start || !end || end < start) {
-            showSaleDateError("期間割引は開始日と終了日を正しく入力してください", !start ? elements.saleDate : elements.saleEndDate);
+            showSaleDateError("期間限定セールの開始日と終了日を正しく入力してください", !start ? elements.saleDate : elements.saleEndDate);
             return;
           }
         }
