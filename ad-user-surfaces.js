@@ -5,8 +5,6 @@
 
   const PAGE = location.pathname.endsWith("shopping.html") ? "shopping" : "discount";
   const HIDE_KEY = "kaimono-clock-hidden-store-ads";
-  const DEMO_CAMPAIGNS_KEY = "kaimono-clock-demo-campaigns-v1";
-  const SAMPLE_STORE_ID = "sample-supermarket-1";
   let userId = A.session()?.user?.id || "guest";
   let hidden = loadHidden();
 
@@ -60,53 +58,6 @@
     module.querySelector(".store-ad-feedback").textContent = message;
   }
 
-  function sampleCampaign() {
-    const now = new Date();
-    const end = new Date(now.getTime() + 14 * 86400000);
-    return {
-      id: "sample-store-ad",
-      user_store_id: SAMPLE_STORE_ID,
-      store_name: "駅前サンプルスーパー",
-      product_name: "牛乳 1L",
-      headline: "駅前サンプルスーパーの牛乳セール",
-      regular_price: 248,
-      sale_price: 198,
-      discount_conditions: "お一人様2点まで",
-      starts_at: new Date(now.getTime() - 60000).toISOString(),
-      ends_at: end.toISOString(),
-      category: "food",
-      stock_note: "在庫状況は店舗でご確認ください",
-      user_notice: "価格・在庫は変わる場合があります。サンプル確認用のお知らせです。",
-      status: "active",
-      sample_fallback: true
-    };
-  }
-
-  function localDemoCampaigns() {
-    try {
-      return JSON.parse(localStorage.getItem(DEMO_CAMPAIGNS_KEY) || "[]")
-        .filter((campaign) => campaign && campaign.user_store_id === SAMPLE_STORE_ID)
-        .map((campaign) => ({
-          ...campaign,
-          id: campaign.id || `demo-${campaign.product_name || campaign.headline || Date.now()}`
-        }));
-    } catch {
-      return [];
-    }
-  }
-
-  async function hasSampleStoreRegistration() {
-    if (!A.session()) return false;
-    if (new URLSearchParams(location.search).get("sample") === "1") return true;
-    if (document.body?.textContent?.includes("駅前サンプルスーパー")) return true;
-    try {
-      const rows = await A.request(`nsp_user_discounts?select=id&store_id=eq.${encodeURIComponent(SAMPLE_STORE_ID)}&limit=1`);
-      return Boolean(rows?.length);
-    } catch {
-      return false;
-    }
-  }
-
   async function loadRegisteredCampaigns() {
     try {
       return await A.rpc("registered_store_ad_campaigns");
@@ -121,17 +72,7 @@
   }
 
   async function loadCampaignsForUser() {
-    let rows = [];
-    try {
-      rows = await loadRegisteredCampaigns();
-    } catch (error) {
-      if (!localDemoCampaigns().length) throw error;
-    }
-    const merged = [...(rows || [])];
-    localDemoCampaigns().forEach((campaign) => {
-      if (!merged.some((row) => row.id === campaign.id)) merged.unshift(campaign);
-    });
-    return merged;
+    return await loadRegisteredCampaigns();
   }
 
   function card(campaign) {
@@ -170,23 +111,6 @@
       const eligibleCampaigns = (rows || []).filter((campaign) => A.activeNow(campaign) && campaign.user_store_id);
       const campaigns = eligibleCampaigns.filter((campaign) => !hidden.has(campaign.id)).slice(0, 3);
       if (!campaigns.length) {
-        if (!eligibleCampaigns.length && await hasSampleStoreRegistration()) {
-          const fallback = sampleCampaign();
-          if (hidden.has(fallback.id)) {
-            list.innerHTML = `<div class="store-ad-empty"><p>非表示にしたサンプルスーパーのお知らせがあります。</p><button type="button" data-action="show-hidden-ads">非表示を解除</button></div>`;
-            list.querySelector('[data-action="show-hidden-ads"]').onclick = () => {
-              hidden.delete(fallback.id);
-              localStorage.setItem(`${HIDE_KEY}:${userId}`, JSON.stringify([...hidden]));
-              setFeedback(module, "サンプルスーパーのお知らせを再表示しました。");
-              load(module);
-            };
-            return;
-          }
-          list.innerHTML = card(fallback);
-          bindCard(module, list.querySelector(".store-ad-card"), fallback);
-          setFeedback(module, "サンプルスーパーのお知らせを表示しています。");
-          return;
-        }
         if (eligibleCampaigns.some((campaign) => hidden.has(campaign.id))) {
           list.innerHTML = `<div class="store-ad-empty"><p>非表示にした店舗からのお知らせがあります。</p><button type="button" data-action="show-hidden-ads">非表示を解除</button></div>`;
           list.querySelector('[data-action="show-hidden-ads"]').onclick = () => {
@@ -208,24 +132,6 @@
         bindCard(module, node, campaigns.find((campaign) => campaign.id === node.dataset.campaignId));
       });
     } catch (error) {
-      if (await hasSampleStoreRegistration()) {
-        const fallback = sampleCampaign();
-        if (hidden.has(fallback.id)) {
-          list.innerHTML = `<div class="store-ad-empty"><p>非表示にしたサンプルスーパーのお知らせがあります。</p><button type="button" data-action="show-hidden-ads">非表示を解除</button></div>`;
-          list.querySelector('[data-action="show-hidden-ads"]').onclick = () => {
-            hidden.delete(fallback.id);
-            localStorage.setItem(`${HIDE_KEY}:${userId}`, JSON.stringify([...hidden]));
-            setFeedback(module, "サンプルスーパーのお知らせを再表示しました。");
-            load(module);
-          };
-          return;
-        }
-        list.innerHTML = card(fallback);
-        bindCard(module, list.querySelector(".store-ad-card"), fallback);
-        setFeedback(module, "サンプルスーパーのお知らせを表示しています。");
-        A.logError(PAGE, "load_store_ads_fallback", error);
-        return;
-      }
       list.innerHTML = `<p class="store-ad-empty">${error.adSchemaMissing ? "広告表示用のDB設定が未反映です。管理者側で広告表示パッチSQLを実行してください。" : "店舗からのお知らせを読み込めませんでした。"}</p>`;
       A.logError(PAGE, "load_store_ads", error);
     }
