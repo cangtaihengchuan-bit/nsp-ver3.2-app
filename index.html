@@ -191,6 +191,23 @@
         display: flex;
       }
 
+      .special-mode-actions {
+        display: none;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .special-mode-actions.ready {
+        display: flex;
+      }
+
+      .special-mode-actions button {
+        min-height: 36px;
+        color: var(--ink);
+        background: transparent;
+        border: 1px solid var(--line);
+      }
+
       h1 {
         max-width: 720px;
         margin: 0;
@@ -310,7 +327,8 @@
         }
 
         .top-row,
-        .auth-session {
+        .auth-session,
+        .special-mode-actions {
           align-items: stretch;
           flex-direction: column;
         }
@@ -551,6 +569,10 @@
             </form>
             <div class="auth-session">
               <span id="authUser"></span>
+              <div id="specialModeActions" class="special-mode-actions" aria-label="開発者モード切り替え">
+                <button type="button" data-special-role="store" data-special-href="./store.html">店舗DBモード</button>
+                <button type="button" data-special-role="developer" data-special-href="./debug.html">デバッグDBモード</button>
+              </div>
               <button id="logoutBtn" class="logout-btn" type="button">ログアウト</button>
             </div>
           </div>
@@ -648,6 +670,7 @@
         authEmail: document.querySelector("#authEmail"),
         authPassword: document.querySelector("#authPassword"),
         authUser: document.querySelector("#authUser"),
+        specialModeActions: document.querySelector("#specialModeActions"),
         logoutBtn: document.querySelector("#logoutBtn"),
       };
 
@@ -689,6 +712,26 @@
         elements.authDot.className = `dot ${signedIn ? "ready" : ""}`;
         elements.authStatus.textContent = message || (signedIn ? "ログイン中" : "未ログイン");
         elements.authUser.textContent = signedIn ? maskEmail(session.user.email) : "";
+        elements.specialModeActions.classList.remove("ready");
+        if (signedIn) refreshSpecialModeActions(session.access_token);
+      }
+
+      async function refreshSpecialModeActions(accessToken) {
+        try {
+          const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/current_app_role`, {
+            method: "POST",
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+          });
+          const role = response.ok ? await response.json() : "user";
+          if (session?.access_token === accessToken && role === "developer") {
+            elements.specialModeActions.classList.add("ready");
+          }
+        } catch { /* Mode links are optional when role lookup is unavailable. */ }
       }
 
       async function authRequest(path, body) {
@@ -751,6 +794,13 @@
         }
         saveSession(null);
         localStorage.removeItem("kaimono-clock-special-mode");
+      });
+
+      elements.specialModeActions.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-special-role]");
+        if (!button || !elements.specialModeActions.classList.contains("ready")) return;
+        localStorage.setItem("kaimono-clock-special-mode", button.dataset.specialRole);
+        location.href = button.dataset.specialHref;
       });
 
       restoreSession();
