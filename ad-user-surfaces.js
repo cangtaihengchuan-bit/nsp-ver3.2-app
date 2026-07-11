@@ -25,6 +25,7 @@
     .store-ad-actions button.primary{border-color:transparent;color:#06201e;background:#73d7c9}
     .store-ad-detail{padding-top:8px;border-top:1px solid var(--line,#314356);color:var(--muted,#9fb0bd);font-size:.85rem}
     .store-ad-empty{padding:10px;color:var(--muted,#9fb0bd);font-size:.88rem}
+    .store-ad-empty button{margin-top:8px;min-height:36px;border:1px solid var(--line,#314356);border-radius:7px;padding:0 10px;color:var(--ink,#e6eef3);background:transparent;font:inherit;font-weight:850;cursor:pointer}
     .store-ad-feedback{margin:0;color:var(--mint,#38d3c5);font-size:.86rem;font-weight:850}
     @media(max-width:480px){.store-ad-header{align-items:stretch;flex-direction:column}.store-ad-actions button{flex:1 1 140px}}
   `;
@@ -47,10 +48,6 @@
   function refreshSessionState() {
     userId = A.session()?.user?.id || "guest";
     hidden = loadHidden();
-  }
-
-  function canShow(campaign) {
-    return A.activeNow(campaign) && campaign.user_store_id && !hidden.has(campaign.id);
   }
 
   function mapUrl(campaign) {
@@ -94,13 +91,26 @@
     list.innerHTML = `<p class="store-ad-empty">店舗からのお知らせを読み込んでいます。</p>`;
     try {
       const rows = await A.rpc("registered_store_ad_campaigns");
-      const campaigns = (rows || []).filter(canShow).filter((item) => A.localImpressionAllowed(item.id)).slice(0, 3);
+      const eligibleCampaigns = (rows || []).filter((campaign) => A.activeNow(campaign) && campaign.user_store_id);
+      const campaigns = eligibleCampaigns.filter((campaign) => !hidden.has(campaign.id)).slice(0, 3);
       if (!campaigns.length) {
+        if (eligibleCampaigns.some((campaign) => hidden.has(campaign.id))) {
+          list.innerHTML = `<div class="store-ad-empty"><p>非表示にした店舗からのお知らせがあります。</p><button type="button" data-action="show-hidden-ads">非表示を解除</button></div>`;
+          list.querySelector('[data-action="show-hidden-ads"]').onclick = () => {
+            eligibleCampaigns.forEach((campaign) => hidden.delete(campaign.id));
+            localStorage.setItem(`${HIDE_KEY}:${userId}`, JSON.stringify([...hidden]));
+            setFeedback(module, "非表示にした店舗からのお知らせを再表示しました。");
+            load(module);
+          };
+          return;
+        }
         list.innerHTML = `<p class="store-ad-empty">割引メモに登録済みの店舗から、配信中のお知らせはありません。</p>`;
         return;
       }
       list.innerHTML = campaigns.map(card).join("");
-      campaigns.forEach((campaign) => A.track(campaign.id, "impression"));
+      campaigns.forEach((campaign) => {
+        if (A.localImpressionAllowed(campaign.id)) A.track(campaign.id, "impression");
+      });
       list.querySelectorAll(".store-ad-card").forEach((node) => {
         bindCard(module, node, campaigns.find((campaign) => campaign.id === node.dataset.campaignId));
       });
