@@ -1012,6 +1012,19 @@
       const EXPENSES_KEY = "monthMateExpenses";
       const FIXED_COSTS_KEY = "monthMateFixedCosts";
 
+      function scopedStorageKey(key) {
+        const userId = currentUserId();
+        return userId ? `${key}:${userId}` : `${key}:guest`;
+      }
+
+      function loadScopedJson(key, fallback) {
+        return loadJson(scopedStorageKey(key), fallback);
+      }
+
+      function saveScopedJson(key, value) {
+        localStorage.setItem(scopedStorageKey(key), JSON.stringify(value));
+      }
+
       const quickItems = [
         { title: "飲み物", category: "food", amount: 150 },
         { title: "昼食", category: "food", amount: 500 },
@@ -1033,8 +1046,8 @@
       });
 
       const state = {
-        shoppingItems: loadJson(SHOPPING_KEY, []),
-        recurringItems: loadJson(RECURRING_KEY, []),
+        shoppingItems: loadScopedJson(SHOPPING_KEY, []),
+        recurringItems: loadScopedJson(RECURRING_KEY, []),
         discounts: [],
         recurringViewDate: new Date(),
         syncLoading: Boolean(currentUserId()),
@@ -1490,19 +1503,19 @@
       }
 
       function saveShoppingItems() {
-        localStorage.setItem(SHOPPING_KEY, JSON.stringify(state.shoppingItems));
+        saveScopedJson(SHOPPING_KEY, state.shoppingItems);
       }
 
       function saveRecurringItems() {
-        localStorage.setItem(RECURRING_KEY, JSON.stringify(state.recurringItems));
+        saveScopedJson(RECURRING_KEY, state.recurringItems);
       }
 
       function loadExpenses() {
-        return loadJson(EXPENSES_KEY, []);
+        return loadScopedJson(EXPENSES_KEY, []);
       }
 
       function saveExpenses(expenses) {
-        localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+        saveScopedJson(EXPENSES_KEY, expenses);
       }
 
       function householdRecordToRow(item) {
@@ -1769,13 +1782,13 @@
       }
 
       function budgetForMonth(date) {
-        const budgets = loadJson(MONTHLY_BUDGETS_KEY, {});
-        return Number(budgets[monthKey(date)]) || Number(localStorage.getItem(LEGACY_BUDGET_KEY)) || 50000;
+        const budgets = loadScopedJson(MONTHLY_BUDGETS_KEY, {});
+        return Number(budgets[monthKey(date)]) || Number(localStorage.getItem(scopedStorageKey(LEGACY_BUDGET_KEY))) || 50000;
       }
 
       function currentMonthExpenseTotal(date) {
-        const expenses = loadJson(EXPENSES_KEY, []);
-        const fixedCosts = loadJson(FIXED_COSTS_KEY, []);
+        const expenses = loadScopedJson(EXPENSES_KEY, []);
+        const fixedCosts = loadScopedJson(FIXED_COSTS_KEY, []);
         const variable = expenses
           .filter((expense) => {
             const expenseDate = parseDate(expense.date);

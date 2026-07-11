@@ -2697,18 +2697,31 @@ const yen = new Intl.NumberFormat("ja-JP", {
   maximumFractionDigits: 0
 });
 
-const legacyBudget = Number(localStorage.getItem("monthMateBudget")) || 50000;
+function scopedStorageKey(key) {
+  const userId = currentUserId();
+  return userId ? `${key}:${userId}` : `${key}:guest`;
+}
+
+function loadScopedJson(key, fallback) {
+  return loadJson(scopedStorageKey(key), fallback);
+}
+
+function saveScopedJson(key, value) {
+  localStorage.setItem(scopedStorageKey(key), JSON.stringify(value));
+}
+
+const legacyBudget = Number(localStorage.getItem(scopedStorageKey("monthMateBudget"))) || 50000;
 const state = {
   viewDate: new Date(),
   selectedDate: null,
-  expenses: loadJson("monthMateExpenses", []),
-  incomes: loadJson("monthMateIncomes", []),
+  expenses: loadScopedJson("monthMateExpenses", []),
+  incomes: loadScopedJson("monthMateIncomes", []),
   discounts: [],
-  fixedCosts: loadJson("monthMateFixedCosts", []),
-  recurringItems: loadJson(RECURRING_KEY, []),
+  fixedCosts: loadScopedJson("monthMateFixedCosts", []),
+  recurringItems: loadScopedJson(RECURRING_KEY, []),
   receiptRows: [],
-  monthlyBudgets: loadJson("monthMateMonthlyBudgets", {}),
-  categoryBudgets: normalizeCategoryBudgets(loadJson("monthMateCategoryBudgets", {})),
+  monthlyBudgets: loadScopedJson("monthMateMonthlyBudgets", {}),
+  categoryBudgets: normalizeCategoryBudgets(loadScopedJson("monthMateCategoryBudgets", {})),
   activeView: viewFromQuery(new URLSearchParams(location.search).get("view"))
 };
 
@@ -3085,27 +3098,27 @@ function normalizeCategoryBudgets(value) {
 }
 
 function saveExpenses() {
-  localStorage.setItem("monthMateExpenses", JSON.stringify(state.expenses));
+  saveScopedJson("monthMateExpenses", state.expenses);
 }
 
 function saveIncomes() {
-  localStorage.setItem("monthMateIncomes", JSON.stringify(state.incomes));
+  saveScopedJson("monthMateIncomes", state.incomes);
 }
 
 function saveMonthlyBudgets() {
-  localStorage.setItem("monthMateMonthlyBudgets", JSON.stringify(state.monthlyBudgets));
+  saveScopedJson("monthMateMonthlyBudgets", state.monthlyBudgets);
 }
 
 function saveCategoryBudgets() {
-  localStorage.setItem("monthMateCategoryBudgets", JSON.stringify(state.categoryBudgets));
+  saveScopedJson("monthMateCategoryBudgets", state.categoryBudgets);
 }
 
 function saveFixedCosts() {
-  localStorage.setItem("monthMateFixedCosts", JSON.stringify(state.fixedCosts));
+  saveScopedJson("monthMateFixedCosts", state.fixedCosts);
 }
 
 function saveRecurringItems() {
-  localStorage.setItem(RECURRING_KEY, JSON.stringify(state.recurringItems));
+  saveScopedJson(RECURRING_KEY, state.recurringItems);
 }
 
 function recordToRow(item, type) {
@@ -3327,7 +3340,7 @@ function applyBudgetToCurrentMonth() {
   const key = monthKey(state.viewDate);
   state.monthlyBudgets[key] = budgetInputAmount();
   saveMonthlyBudgets();
-  localStorage.setItem("monthMateBudget", String(state.monthlyBudgets[key]));
+  localStorage.setItem(scopedStorageKey("monthMateBudget"), String(state.monthlyBudgets[key]));
   syncBudgetForMonth(key).catch(() => null);
   closeBudgetEditor();
   render();
@@ -3357,7 +3370,7 @@ function applyBudgetToAllMonths() {
   keys.forEach((key) => {
     state.monthlyBudgets[key] = amount;
   });
-  localStorage.setItem("monthMateBudget", String(amount));
+  localStorage.setItem(scopedStorageKey("monthMateBudget"), String(amount));
   saveMonthlyBudgets();
   syncBudgetsForMonths([...keys]).catch(() => null);
   closeBudgetEditor();
@@ -3808,7 +3821,7 @@ function setView(viewId, updateHash = true) {
 
 function render() {
   state.discounts = loadDiscountCache();
-  state.recurringItems = loadJson(RECURRING_KEY, state.recurringItems);
+  state.recurringItems = loadScopedJson(RECURRING_KEY, state.recurringItems);
   els.budget.value = currentBudget();
   renderCalendar();
   renderTotals();

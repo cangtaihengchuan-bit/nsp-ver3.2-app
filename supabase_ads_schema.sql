@@ -106,6 +106,9 @@ end $$;
 create table if not exists public.ad_campaigns (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
+  -- Public store ID used by the user-facing nsp_user_discounts table.
+  -- It is separate from the private UUID used by store accounts.
+  user_store_id text,
   branch_id uuid references public.store_branches(id) on delete set null,
   external_key text unique,
   store_name text not null default '',
@@ -146,6 +149,7 @@ create table if not exists public.ad_campaigns (
 
 alter table public.ad_campaigns
   add column if not exists store_name text not null default '',
+  add column if not exists user_store_id text,
   add column if not exists external_key text,
   add column if not exists branch_name text,
   add column if not exists branch_map_url text,
@@ -216,6 +220,8 @@ create table if not exists public.feature_flags (
 );
 
 create index if not exists ad_campaigns_store_status_idx on public.ad_campaigns(store_id, status, starts_at, ends_at);
+create index if not exists ad_campaigns_user_store_status_idx on public.ad_campaigns(user_store_id, status, starts_at, ends_at)
+  where user_store_id is not null;
 create unique index if not exists stores_external_key_uidx on public.stores(external_key) where external_key is not null;
 create unique index if not exists store_branches_external_key_uidx on public.store_branches(external_key) where external_key is not null;
 create unique index if not exists ad_campaigns_external_key_uidx on public.ad_campaigns(external_key) where external_key is not null;
@@ -243,8 +249,12 @@ end; $$;
 
 create or replace function public.enforce_campaign_store_integrity()
 returns trigger language plpgsql security definer set search_path = public as $$
-declare branch_store_id uuid;
+declare
+  branch_store_id uuid;
+  store_external_key text;
 begin
+  select external_key into store_external_key from public.stores where id = new.store_id;
+  new.user_store_id := store_external_key;
   if new.branch_id is not null then
     select store_id into branch_store_id from public.store_branches where id = new.branch_id;
     if branch_store_id is null or branch_store_id <> new.store_id then
@@ -335,14 +345,93 @@ end; $$;
 create or replace function public.active_ad_campaigns()
 returns setof public.ad_campaigns
 language sql stable security definer set search_path = public as $$
-  select *
-  from public.ad_campaigns
-  where status in ('approved', 'scheduled', 'active')
-    and starts_at <= now()
-    and ends_at >= now()
-  order by starts_at desc
+  select campaign.*
+  from public.ad_campaigns campaign
+  where campaign.status in ('approved', 'scheduled', 'active')
+    and campaign.starts_at <= now()
+    and campaign.ends_at >= now()
+    and campaign.user_store_id is not null
+    and exists (
+      select 1
+      from public.nsp_user_discounts discount
+      where discount.user_id = auth.uid()
+        and discount.store_id = campaign.user_store_id
+    )
+  order by campaign.starts_at desc
   limit 50;
 $$;
+
+create or replace function public.registered_store_ad_campaigns()
+returns setof public.ad_campaigns
+language sql stable security definer set search_path = public as $$
+  select campaign.*
+  from public.ad_campaigns campaign
+  where campaign.status in ('approved', 'scheduled', 'active')
+    and campaign.starts_at <= now()
+    and campaign.ends_at >= now()
+    and campaign.user_store_id is not null
+    and exists (
+      select 1
+      from public.nsp_user_discounts discount
+      where discount.user_id = auth.uid()
+        and discount.store_id = campaign.user_store_id
+    )
+  order by campaign.starts_at desc
+  limit 50;
+$$;
+
+create or replace function public.seed_user_sample_discount()
+returns public.nsp_user_discounts
+language plpgsql security definer set search_path = public as $$
+declare
+  result public.nsp_user_discounts;
+begin
+  if auth.uid() is null then raise exception 'login required'; end if;
+
+  select *
+    into result
+    from public.nsp_user_discounts
+   where user_id = auth.uid()
+     and store_id = 'sample-supermarket-1'
+   order by created_at desc
+   limit 1;
+
+  if result.id is not null then
+    return result;
+  end if;
+
+  insert into public.nsp_user_discounts(
+    user_id,
+    store_id,
+    store_name,
+    store_label,
+    origin_label,
+    store_type,
+    item_name,
+    price,
+    sale_mode,
+    sale_date,
+    note,
+    shared_enabled
+  )
+  values (
+    auth.uid(),
+    'sample-supermarket-1',
+    '駅前サンプルスーパー',
+    '駅前サンプルスーパー',
+    'サンプル',
+    'supermarket',
+    '牛乳 1L',
+    198,
+    'once',
+    current_date,
+    'サンプル店舗広告の表示確認用です。',
+    false
+  )
+  returning * into result;
+
+  return result;
+end; $$;
 
 create or replace function public.is_active_campaign(target_campaign_id uuid)
 returns boolean
@@ -362,7 +451,6 @@ returns public.ad_campaigns
 language plpgsql security definer set search_path = public as $$
 declare
   sample_store_id uuid;
-  sample_branch_id uuid;
   result public.ad_campaigns;
 begin
   if not public.is_app_developer() then raise exception 'developer role required'; end if;
@@ -380,41 +468,18 @@ begin
         contact_note = excluded.contact_note
   returning id into sample_store_id;
 
-  insert into public.store_branches(external_key, store_id, name, address, latitude, longitude, map_url)
-  values (
-    'sample-supermarket-1:station',
-    sample_store_id,
-    '駅前店',
-    '駅前通り 1-2-3',
-    35.681236,
-    139.767125,
-    'https://www.google.com/maps/search/?api=1&query=%E9%A7%85%E5%89%8D%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B9%E3%83%BC%E3%83%91%E3%83%BC'
-  )
-  on conflict (external_key) do update
-    set store_id = excluded.store_id,
-        name = excluded.name,
-        address = excluded.address,
-        latitude = excluded.latitude,
-        longitude = excluded.longitude,
-        map_url = excluded.map_url
-  returning id into sample_branch_id;
-
   perform set_config('app.campaign_transition', 'allowed', true);
   insert into public.ad_campaigns(
-    external_key, store_id, branch_id, store_name, branch_name, branch_map_url,
-    branch_latitude, branch_longitude, product_name, headline, regular_price,
+    external_key, store_id, user_store_id, store_name,
+    product_name, headline, regular_price,
     sale_price, discount_conditions, starts_at, ends_at, category,
-    delivery_radius_km, stock_note, user_notice, status, submitted_at
+    delivery_radius_km, stock_note, user_notice, status, submitted_at, approved_at, approved_by
   )
   values (
     'debug-sample-campaign',
     sample_store_id,
-    sample_branch_id,
+    'sample-supermarket-1',
     '駅前サンプルスーパー',
-    '駅前店',
-    'https://www.google.com/maps/search/?api=1&query=%E9%A7%85%E5%89%8D%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B9%E3%83%BC%E3%83%91%E3%83%BC',
-    35.681236,
-    139.767125,
     '牛乳 1L',
     '駅前サンプルスーパーの牛乳セール',
     248,
@@ -426,17 +491,20 @@ begin
     5,
     '在庫状況は店舗でご確認ください',
     'ユーザー向けサンプル店舗と結びついたデバッグ用広告です。',
-    'submitted',
-    now()
+    'active',
+    now(),
+    now(),
+    auth.uid()
   )
   on conflict (external_key) do update
     set store_id = excluded.store_id,
-        branch_id = excluded.branch_id,
+        user_store_id = excluded.user_store_id,
+        branch_id = null,
         store_name = excluded.store_name,
-        branch_name = excluded.branch_name,
-        branch_map_url = excluded.branch_map_url,
-        branch_latitude = excluded.branch_latitude,
-        branch_longitude = excluded.branch_longitude,
+        branch_name = null,
+        branch_map_url = null,
+        branch_latitude = null,
+        branch_longitude = null,
         product_name = excluded.product_name,
         headline = excluded.headline,
         regular_price = excluded.regular_price,
@@ -448,13 +516,15 @@ begin
         delivery_radius_km = excluded.delivery_radius_km,
         stock_note = excluded.stock_note,
         user_notice = excluded.user_notice,
-        status = 'submitted',
+        status = 'active',
         submitted_at = now(),
+        approved_at = now(),
+        approved_by = auth.uid(),
         rejection_reason = null
   returning * into result;
 
   insert into public.audit_logs(actor_id, action, entity_type, entity_id, detail)
-  values (auth.uid(), 'debug_sample_submitted', 'campaign', result.id, jsonb_build_object('external_key', result.external_key));
+  values (auth.uid(), 'debug_sample_activated', 'campaign', result.id, jsonb_build_object('external_key', result.external_key, 'user_store_id', result.user_store_id));
 
   return result;
 end; $$;
@@ -531,7 +601,7 @@ create policy "store members edit own branches" on public.store_branches for all
 create policy "store members edit own stores" on public.stores for update to authenticated using (public.can_manage_store(id)) with check (public.can_manage_store(id));
 
 -- Store members can only manage campaigns belonging to their store. User-facing
--- live ads are exposed through active_ad_campaigns(), not direct table select.
+-- live ads are exposed through registered_store_ad_campaigns(), not direct table select.
 create policy "developers manage campaigns" on public.ad_campaigns for all to authenticated using (public.is_app_developer()) with check (public.is_app_developer());
 create policy "campaign owner manages own store" on public.ad_campaigns for all to authenticated using (public.can_manage_store(store_id)) with check (public.can_manage_store(store_id));
 create policy "campaign targets managed by owner" on public.ad_campaign_targets for all to authenticated using (
@@ -557,7 +627,7 @@ grant usage on schema public to authenticated;
 grant select on public.app_roles, public.stores, public.store_members, public.store_branches, public.ad_campaigns, public.ad_campaign_targets, public.ad_campaign_reviews to authenticated;
 grant insert, update, delete on public.stores, public.store_branches, public.ad_campaigns, public.ad_campaign_targets to authenticated;
 grant insert on public.campaign_events, public.app_error_logs to authenticated;
-grant execute on function public.current_app_role(), public.is_app_developer(), public.can_manage_store(uuid), public.can_view_store(uuid), public.can_manage_store_path(text), public.submit_campaign(uuid), public.review_campaign(uuid, text, text), public.stop_campaign(uuid), public.store_campaign_metrics(uuid), public.developer_data_counts(), public.active_ad_campaigns(), public.is_active_campaign(uuid), public.create_debug_sample_campaign() to authenticated;
+grant execute on function public.current_app_role(), public.is_app_developer(), public.can_manage_store(uuid), public.can_view_store(uuid), public.can_manage_store_path(text), public.submit_campaign(uuid), public.review_campaign(uuid, text, text), public.stop_campaign(uuid), public.store_campaign_metrics(uuid), public.developer_data_counts(), public.active_ad_campaigns(), public.registered_store_ad_campaigns(), public.seed_user_sample_discount(), public.is_active_campaign(uuid), public.create_debug_sample_campaign() to authenticated;
 
 -- Optional campaign image storage. The object path always begins with the owning store UUID.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

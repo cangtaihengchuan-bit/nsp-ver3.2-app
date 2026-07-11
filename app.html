@@ -3253,12 +3253,36 @@
         renderActivePanel();
       }
 
-      function useSample() {
+      async function seedSampleDiscount() {
+        if (!hasSession()) return false;
+        await supabaseRequest("rpc/seed_user_sample_discount", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        await loadNotesFromSupabase();
+        return true;
+      }
+
+      async function useSample() {
         state.stores = sampleStores;
         state.selectedStoreId = sampleStores[0].id;
         state.activePanel = "stores";
-        setStatus("ready", "サンプル店舗を表示しています。現在地取得で実データに切り替えできます。");
+        setStatus("ready", "サンプル店舗を表示しています。");
         render();
+        if (!hasSession()) return;
+        try {
+          const seeded = await seedSampleDiscount();
+          setStatus(
+            "ready",
+            seeded
+              ? "サンプル店舗と割引メモを読み込みました。店舗からのお知らせも確認できます。"
+              : "サンプル店舗を表示しています。",
+          );
+          render();
+          window.dispatchEvent(new CustomEvent("kaimono-clock-auth-change", { detail: { signedIn: true } }));
+        } catch {
+          setStatus("error", "サンプル店舗は表示中です。サンプル割引メモのDB保存に失敗しました。");
+        }
       }
 
       elements.locateBtn.addEventListener("click", () => {
@@ -3290,7 +3314,7 @@
         );
       });
 
-      elements.sampleBtn.addEventListener("click", useSample);
+      elements.sampleBtn.addEventListener("click", () => { void useSample(); });
 
       elements.radiusSelect.addEventListener("change", () => {
         if (state.userPosition) {
@@ -3568,7 +3592,7 @@
         renderAuth();
         render();
         if (new URLSearchParams(location.search).get("sample") === "1") {
-          useSample();
+          void useSample();
         }
       }
 
