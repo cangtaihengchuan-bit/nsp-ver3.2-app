@@ -18,6 +18,7 @@
     "monthMateMonthlyBudgets",
     "monthMateCategoryBudgets"
   ];
+  const SHARE_CONTROL_SELECTOR = "#acceptSharedDiscounts, #shareDiscount, [data-action=\"toggle-share\"]";
 
   const mode = () => localStorage.getItem(MODE_KEY) === "cloud" ? "cloud" : "local";
   const isLocal = () => mode() === "local";
@@ -69,7 +70,8 @@
 
   function countLocalItems() {
     const scopedCount = LOCAL_SCOPED_KEYS.reduce((total, key) => {
-      const value = readJson(localKey(key), Array.isArray(readJson(localKey(key), [])) ? [] : {});
+      const value = readJson(localKey(key), null);
+      if (value == null) return total;
       return total + (Array.isArray(value) ? value.length : Object.keys(value || {}).length);
     }, 0);
     const discountCount = Object.values(localDiscounts()).reduce((total, notes) => total + (Array.isArray(notes) ? notes.length : 0), 0);
@@ -192,22 +194,32 @@
     return uploaded;
   }
 
+  function hideLocalOnlyControls(root = document) {
+    if (!isLocal()) return;
+    const controls = [];
+    if (root.nodeType === Node.ELEMENT_NODE && root.matches?.(SHARE_CONTROL_SELECTOR)) controls.push(root);
+    controls.push(...root.querySelectorAll?.(SHARE_CONTROL_SELECTOR) || []);
+    controls.forEach((control) => {
+      const details = control.closest("details");
+      if (details && !details.hidden) details.hidden = true;
+    });
+  }
+
   function updateNativeUi() {
     document.documentElement.classList.toggle("native-local-mode", isLocal());
     document.documentElement.classList.toggle("native-cloud-mode", isCloud());
     const pill = document.querySelector("#androidStorageModeButton");
     if (pill) {
-      pill.textContent = isLocal() ? "端末内" : "同期";
-      pill.setAttribute("aria-label", isLocal() ? "保存先: この端末" : "保存先: データベース同期");
+      const label = isLocal() ? "端末内" : "同期";
+      const accessibleLabel = isLocal() ? "保存先: この端末" : "保存先: データベース同期";
+      if (pill.textContent !== label) pill.textContent = label;
+      if (pill.getAttribute("aria-label") !== accessibleLabel) pill.setAttribute("aria-label", accessibleLabel);
     }
     if (isLocal()) {
       document.querySelectorAll("#sessionPill, #authUser").forEach((node) => {
         if (node.textContent !== "端末内保存（アカウント不要）") node.textContent = "端末内保存（アカウント不要）";
       });
-      document.querySelectorAll("#acceptSharedDiscounts, #shareDiscount, [data-action=\"toggle-share\"]").forEach((control) => {
-        const details = control.closest("details");
-        if (details && !details.hidden) details.hidden = true;
-      });
+      hideLocalOnlyControls();
       const dataManagementCopy = document.querySelector(".data-management .muted");
       if (dataManagementCopy && dataManagementCopy.textContent !== "この端末に保存した割引メモをまとめて削除します。") {
         dataManagementCopy.textContent = "この端末に保存した割引メモをまとめて削除します。";
@@ -225,9 +237,6 @@
       .native-local-mode #householdLogoutBtn,
       .native-local-mode #acceptSharedDiscounts,
       .native-local-mode [aria-label="共有設定"],
-      .native-local-mode details:has(#acceptSharedDiscounts),
-      .native-local-mode details:has(#shareDiscount),
-      .native-local-mode details:has([data-action="toggle-share"]),
       .native-local-mode #storeAdMount,
       .native-local-mode .store-ad-surface { display:none!important; }
       .native-local-mode body,
@@ -319,8 +328,22 @@
       }
     });
     window.addEventListener("kaimono-clock-auth-change", refreshDialog);
-    const cloudControlObserver = new MutationObserver(updateNativeUi);
-    cloudControlObserver.observe(document.body, { childList: true, subtree: true });
+    let localControlUpdateQueued = false;
+    const cloudControlObserver = new MutationObserver((records) => {
+      if (!isLocal() || localControlUpdateQueued) return;
+      const hasNewShareControl = records.some((record) => [...record.addedNodes].some((node) => (
+        node.nodeType === Node.ELEMENT_NODE && (
+          node.matches?.(SHARE_CONTROL_SELECTOR) || node.querySelector?.(SHARE_CONTROL_SELECTOR)
+        )
+      )));
+      if (!hasNewShareControl) return;
+      localControlUpdateQueued = true;
+      requestAnimationFrame(() => {
+        localControlUpdateQueued = false;
+        hideLocalOnlyControls();
+      });
+    });
+    if (isLocal()) cloudControlObserver.observe(document.body, { childList: true, subtree: true });
     updateNativeUi();
   }
 

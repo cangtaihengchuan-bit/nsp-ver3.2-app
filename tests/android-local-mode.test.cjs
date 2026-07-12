@@ -29,6 +29,11 @@ assert.match(transformedApp, /割引情報をこの端末に保存しました/)
 assert.match(transformedApp, /state\.user = \{ id: window\.KaimonoAndroidStorage\.localUserId/);
 assert.match(transformedApp, /if \(window\.KaimonoAndroidStorage\?\.isLocal\(\)\) \{ return true; \}/);
 
+const androidRuntimeSource = fs.readFileSync(path.join(root, "scripts", "android-local-mode.js"), "utf8");
+assert.equal(androidRuntimeSource.includes(":has("), false, "Android runtime must avoid expensive :has() selectors");
+assert.match(androidRuntimeSource, /hasNewShareControl/);
+assert.doesNotMatch(androidRuntimeSource, /new MutationObserver\(updateNativeUi\).*observe\(document\.body/s);
+
 class StorageMock {
   constructor(values = {}) { this.values = new Map(Object.entries(values)); }
   getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
@@ -62,8 +67,7 @@ function loadRuntime(initialStorage, fetchImpl) {
     Math,
     console
   });
-  const source = fs.readFileSync(path.join(root, "scripts", "android-local-mode.js"), "utf8");
-  vm.runInContext(source, context);
+  vm.runInContext(androidRuntimeSource, context);
   return { storage: window.KaimonoAndroidStorage, localStorage, window };
 }
 
