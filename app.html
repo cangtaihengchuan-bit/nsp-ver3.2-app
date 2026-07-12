@@ -2488,7 +2488,7 @@
           storeType: row.store_type,
           name: row.item_name,
           price: Number(row.price),
-          shareEnabled: Boolean(row.shared_enabled),
+          shareEnabled: row.store_type === "store_ad" ? false : Boolean(row.shared_enabled),
           saleMode: row.sale_mode || "once",
           saleDate: row.sale_date || "",
           saleEndDate: row.sale_end_date || "",
@@ -2519,7 +2519,7 @@
           sale_weekdays: note.saleMode === "weekly" ? normalizeCsvNumbers(note.saleWeekdays || note.saleWeekday, 0, 6).join(",") : null,
           sale_month_day: note.saleMode === "monthly" ? Number(String(note.saleMonthDays || note.saleMonthDay || "").split(",")[0]) : null,
           sale_month_days: note.saleMode === "monthly" ? normalizeCsvNumbers(note.saleMonthDays || note.saleMonthDay, 1, 31).join(",") : null,
-          shared_enabled: Boolean(note.shareEnabled),
+          shared_enabled: note.storeType === "store_ad" ? false : Boolean(note.shareEnabled),
           note: note.note || null,
         };
       }
@@ -2565,12 +2565,31 @@
           ? `${SUPABASE_TABLE}?select=*&order=created_at.desc`
           : `${SUPABASE_TABLE}?select=*&user_id=eq.${encodeURIComponent(state.user.id)}&order=created_at.desc`;
         const rows = await supabaseRequest(query);
-        state.notes = groupRows(rows || []);
+        const normalizedRows = await normalizeStoreAdSharing(rows || []);
+        state.notes = groupRows(normalizedRows);
         const purged = await purgeExpiredOneTimeNotes();
         if (!purged) saveDiscountCache();
         setStatus("ready", state.acceptSharedDiscounts
           ? "Supabaseから保存済み・共有済みの割引情報を読み込みました。"
           : "Supabaseから保存済みの割引情報を読み込みました。");
+      }
+
+      async function normalizeStoreAdSharing(rows) {
+        const invalidOwnRows = rows.filter((row) => (
+          row.user_id === state.user?.id
+          && row.store_type === "store_ad"
+          && row.shared_enabled === true
+        ));
+        await Promise.all(invalidOwnRows.map((row) => (
+          supabaseRequest(`${SUPABASE_TABLE}?id=eq.${encodeURIComponent(row.id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ shared_enabled: false }),
+          })
+        )));
+        if (!invalidOwnRows.length) return rows;
+        const invalidIds = new Set(invalidOwnRows.map((row) => row.id));
+        return rows.map((row) => invalidIds.has(row.id) ? { ...row, shared_enabled: false } : row);
       }
 
       async function migrateLocalBackupIfEmpty() {
@@ -3145,14 +3164,16 @@
           const actionLabel = note.isShared ? "非表示" : "削除";
           const shareControl = note.isShared
             ? ""
-            : `<details class="share-details">
-                <summary>この割引情報を共有する</summary>
-                <p class="share-note">店名・商品名・価格・割引日のみ共有されます。個人情報や店舗ラベルは共有されません。</p>
-                <label class="share-toggle">
-                  <input type="checkbox" data-action="toggle-share" aria-label="この割引情報を共有する" ${note.shareEnabled ? "checked" : ""} />
-                  同じ店舗のユーザーへ共有
-                </label>
-              </details>`;
+            : note.storeType === "store_ad"
+              ? '<p class="share-note">店舗広告から保存した情報は、他のユーザーへ共有されません。</p>'
+              : `<details class="share-details">
+                  <summary>この割引情報を共有する</summary>
+                  <p class="share-note">店名・商品名・価格・割引日のみ共有されます。個人情報や店舗ラベルは共有されません。</p>
+                  <label class="share-toggle">
+                    <input type="checkbox" data-action="toggle-share" aria-label="この割引情報を共有する" ${note.shareEnabled ? "checked" : ""} />
+                    同じ店舗のユーザーへ共有
+                  </label>
+                </details>`;
           row.innerHTML = `
             <div class="discount-main">
               <small class="muted">店舗</small>

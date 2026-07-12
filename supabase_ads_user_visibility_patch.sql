@@ -179,4 +179,32 @@ grant execute on function public.active_ad_campaigns() to authenticated;
 grant execute on function public.registered_store_ad_campaigns() to authenticated;
 grant execute on function public.registered_store_ad_campaign_diagnostics() to authenticated;
 
+-- Store advertisements saved into a personal discount memo are reference
+-- copies, not user-created discount information. They must never be shared.
+update public.nsp_user_discounts
+   set shared_enabled = false
+ where store_type = 'store_ad'
+   and shared_enabled = true;
+
+drop policy if exists "nsp users can insert own discounts" on public.nsp_user_discounts;
+create policy "nsp users can insert own discounts"
+  on public.nsp_user_discounts
+  for insert
+  to authenticated
+  with check (
+    auth.uid() = user_id
+    and (store_type <> 'store_ad' or shared_enabled = false)
+  );
+
+drop policy if exists "nsp users can update own discounts" on public.nsp_user_discounts;
+create policy "nsp users can update own discounts"
+  on public.nsp_user_discounts
+  for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (
+    auth.uid() = user_id
+    and (store_type <> 'store_ad' or shared_enabled = false)
+  );
+
 notify pgrst, 'reload schema';

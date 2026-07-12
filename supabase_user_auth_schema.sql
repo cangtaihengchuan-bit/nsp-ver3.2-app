@@ -81,14 +81,20 @@ create policy "nsp users can insert own discounts"
   on public.nsp_user_discounts
   for insert
   to authenticated
-  with check (auth.uid() = user_id);
+  with check (
+    auth.uid() = user_id
+    and (store_type <> 'store_ad' or shared_enabled = false)
+  );
 
 create policy "nsp users can update own discounts"
   on public.nsp_user_discounts
   for update
   to authenticated
   using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  with check (
+    auth.uid() = user_id
+    and (store_type <> 'store_ad' or shared_enabled = false)
+  );
 
 create policy "nsp users can delete own discounts"
   on public.nsp_user_discounts
