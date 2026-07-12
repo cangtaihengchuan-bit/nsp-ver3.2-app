@@ -199,6 +199,11 @@
     const note = `店舗からのお知らせ: ${campaign.headline}`;
     button.disabled = true;
     try {
+      const labelRows = await A.request(
+        `nsp_user_discounts?select=store_label&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
+        + "&store_type=neq.store_ad&store_label=not.is.null&order=created_at.desc&limit=1"
+      );
+      const storeLabel = labelRows?.[0]?.store_label || campaign.store_name || "店舗";
       const existing = await A.request(
         `nsp_user_discounts?select=id&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
         + `&item_name=eq.${encodeURIComponent(campaign.product_name)}`
@@ -210,6 +215,7 @@
           method: "PATCH",
           headers: { Prefer: "return=minimal" },
           body: JSON.stringify({
+            store_label: storeLabel,
             sale_mode: isRange ? "range" : "once",
             sale_date: startDate || null,
             sale_end_date: isRange ? endDate : null
@@ -226,7 +232,7 @@
           user_id: A.session().user.id,
           store_id: campaign.user_store_id,
           store_name: campaign.store_name || "店舗",
-          store_label: campaign.store_name || "店舗",
+          store_label: storeLabel,
           origin_label: "広告",
           store_type: "store_ad",
           item_name: campaign.product_name,
