@@ -64,7 +64,7 @@ function loadRuntime(initialStorage, fetchImpl) {
   });
   const source = fs.readFileSync(path.join(root, "scripts", "android-local-mode.js"), "utf8");
   vm.runInContext(source, context);
-  return { storage: window.KaimonoAndroidStorage, localStorage };
+  return { storage: window.KaimonoAndroidStorage, localStorage, window };
 }
 
 const oldSession = JSON.stringify({ access_token: "old", user: { id: "old-user" } });
@@ -92,6 +92,8 @@ const cloudRuntime = loadRuntime({
 });
 
 (async () => {
+  const blockedResponse = await localRuntime.window.fetch("https://wnxphjricowzxbkwnmjx.supabase.co/rest/v1/nsp_household_records");
+  assert.equal(blockedResponse.status, 503, "Supabase requests must be blocked in local mode");
   const uploaded = await cloudRuntime.storage.uploadLocalData();
   assert.equal(uploaded, 3);
   assert.equal(requests.length, 3);
