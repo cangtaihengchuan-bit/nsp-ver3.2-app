@@ -34,7 +34,7 @@
   function target() {
     return PAGE === "shopping"
       ? document.querySelector("#discountCandidates")?.parentElement
-      : document.querySelector("#discountOverview") || document.querySelector("#notes")?.parentElement;
+      : document.querySelector("#storeAdMount") || document.querySelector("#discountOverview") || document.querySelector("#notes")?.parentElement;
   }
 
   function loadHidden() {
