@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { transformAndroidHtml } = require("./android-html-transform.cjs");
 
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "www");
@@ -22,13 +23,13 @@ for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
   const source = path.join(root, entry.name);
   const destination = path.join(output, entry.name);
   if (extension === ".html") {
-    const html = fs.readFileSync(source, "utf8");
-    const bridgeTag = '  <script src="android-bridge.js"></script>\n';
-    fs.writeFileSync(destination, html.replace(/<\/body>/i, `${bridgeTag}</body>`));
+    const html = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
+    fs.writeFileSync(destination, transformAndroidHtml(entry.name, html));
   } else {
     fs.copyFileSync(source, destination);
   }
 }
 
 fs.copyFileSync(path.join(__dirname, "android-bridge.js"), path.join(output, "android-bridge.js"));
+fs.copyFileSync(path.join(__dirname, "android-local-mode.js"), path.join(output, "android-local-mode.js"));
 console.log(`Android web bundle created at ${output}`);
