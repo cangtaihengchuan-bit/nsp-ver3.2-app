@@ -4,6 +4,7 @@
   "private": true,
   "description": "Kaimono Clock Android package",
   "scripts": {
+    "test:price-lab": "node tests/price-intelligence-lab.test.cjs",
     "web:bundle": "node scripts/build-android-web.cjs",
     "android:sync": "npm run web:bundle && cap sync android",
     "android:build:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
