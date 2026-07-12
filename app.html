@@ -3617,6 +3617,16 @@
         }
       }
 
+      window.addEventListener("kaimono-clock-discount-saved", async () => {
+        if (!hasSession()) return;
+        try {
+          await loadNotesFromSupabase();
+          render();
+        } catch {
+          setStatus("error", "保存には成功しましたが、割引メモの再読み込みに失敗しました。再読み込みしてください。");
+        }
+      });
+
       syncScheduleFields();
       initializeApp();
     </script>
