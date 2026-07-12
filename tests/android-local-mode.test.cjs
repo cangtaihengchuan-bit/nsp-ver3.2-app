@@ -31,6 +31,9 @@ assert.match(transformedApp, /if \(window\.KaimonoAndroidStorage\?\.isLocal\(\)\
 assert.doesNotMatch(transformedApp, /サンプルで試す/);
 assert.match(transformedApp, /class="android-location-switch"/);
 assert.match(transformedApp, /aria-label="店舗の検索方法"/);
+assert.match(transformedApp, /id="currentLocationSearchBtn"/);
+assert.match(transformedApp, /currentLocationSearchBtn\.addEventListener\("click"/);
+assert.match(transformedApp, /elements\.locateBtn\.addEventListener\("click", \(\) => \{\s+setLocationSearchMode\("current"\);\s+\}\);/);
 assert.match(transformedApp, /\.native-local-mode #authPanel \{ display:grid!important; \}/);
 assert.match(transformedApp, /class="android-page-icon" src="\.\/android-icon-discount\.svg"/);
 

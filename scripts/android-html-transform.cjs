@@ -144,22 +144,29 @@ function addAndroidDiscountShell(html) {
           <div class="android-location-switch" role="group" aria-label="店舗の検索方法">
             <button id="locateBtn" class="android-location-option is-active" type="button" aria-pressed="true">現在地から</button>
             <button id="savedLocationBtn" class="android-location-option" type="button" aria-pressed="false">登録地点から</button>
-          </div>`,
+          </div>
+          <button id="currentLocationSearchBtn" class="btn btn-primary android-location-search" type="button">現在地から探す</button>`,
     "Android discount location controls",
   );
   output = replaceOnce(
     output,
     `      elements.locateBtn.addEventListener("click", () => {`,
-    `      const setLocationSearchMode = (mode) => {
+    `      const currentLocationSearchBtn = document.querySelector("#currentLocationSearchBtn");
+      const setLocationSearchMode = (mode) => {
         const useCurrent = mode === "current";
         elements.locateBtn.classList.toggle("is-active", useCurrent);
         elements.savedLocationBtn.classList.toggle("is-active", !useCurrent);
         elements.locateBtn.setAttribute("aria-pressed", String(useCurrent));
         elements.savedLocationBtn.setAttribute("aria-pressed", String(!useCurrent));
+        currentLocationSearchBtn.hidden = !useCurrent;
+        if (useCurrent) elements.locationPanel.classList.add("hidden-panel");
       };
 
       elements.locateBtn.addEventListener("click", () => {
-        setLocationSearchMode("current");`,
+        setLocationSearchMode("current");
+      });
+
+      currentLocationSearchBtn.addEventListener("click", () => {`,
     "Android current location selection",
   );
   output = replaceOnce(
@@ -200,6 +207,8 @@ function addAndroidDiscountShell(html) {
       .android-location-option + .android-location-option { border-left:1px solid var(--line); }
       .android-location-option.is-active { color:#fff;background:var(--primary); }
       html[data-theme="white-blue"] .android-location-option.is-active { color:#fff;background:#238bc1; }
+      .android-location-search { width:100%;margin-top:10px; }
+      .android-location-search[hidden] { display:none!important; }
       .native-local-mode #authPanel { display:grid!important; }
     </style>
 </head>`,
