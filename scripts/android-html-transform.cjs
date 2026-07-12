@@ -110,7 +110,7 @@ function addAndroidIndexShell(html) {
       #authBox .auth-session { display:none!important; }
       html,body { min-height:100%; }
       body { min-height:100dvh;display:flex;align-items:stretch;padding-bottom:0!important; }
-      .native-local-mode body,.native-cloud-mode body { padding-bottom:0!important; }
+      html.native-local-mode body,html.native-cloud-mode body { padding-bottom:0!important; }
       main { min-height:100dvh;display:flex;flex:1 0 auto;flex-direction:column;justify-content:center;gap:18px;margin:0 auto; }
       .top-row { align-items:center; }
       #authBox { width:min(240px,100%); }

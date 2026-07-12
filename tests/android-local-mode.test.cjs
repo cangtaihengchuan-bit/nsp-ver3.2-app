@@ -47,6 +47,7 @@ assert.match(transformedIndex, /android-icon-shopping\.svg/);
 assert.match(transformedIndex, /android-icon-discount\.svg/);
 assert.match(transformedIndex, /android-icon-household\.svg/);
 assert.match(transformedIndex, /body \{ min-height:100dvh;[^}]*padding-bottom:0!important;/);
+assert.match(transformedIndex, /html\.native-local-mode body,html\.native-cloud-mode body \{ padding-bottom:0!important; \}/);
 assert.equal((transformedIndex.match(/class="actions android-home-nav"/g) || []).length, 1);
 
 const transformedShopping = transformAndroidHtml(
