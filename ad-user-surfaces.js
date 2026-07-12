@@ -213,9 +213,10 @@
         + "&store_type=neq.store_ad&store_label=not.is.null&order=created_at.desc&limit=1"
       );
       const existingLabel = existing?.[0]?.store_label || "";
-      const storeLabel = existingLabel && existingLabel !== campaign.store_name
-        ? existingLabel
-        : labelRows?.[0]?.store_label || campaign.store_name || "店舗";
+      const storeLabel = labelRows?.[0]?.store_label
+        || (existingLabel && existingLabel !== campaign.store_name ? existingLabel : "")
+        || campaign.store_name
+        || "店舗";
       await A.request(
         `nsp_user_discounts?user_id=eq.${encodeURIComponent(sessionUserId)}`
         + `&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`,
