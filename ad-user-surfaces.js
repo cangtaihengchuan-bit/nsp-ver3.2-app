@@ -184,9 +184,13 @@
     return `${year}-${month}-${day}`;
   }
 
-  function notifyDiscountSaved(campaign) {
+  function notifyDiscountSaved(campaign, storeLabel) {
     window.dispatchEvent(new CustomEvent("kaimono-clock-discount-saved", {
-      detail: { campaignId: campaign.id }
+      detail: {
+        campaignId: campaign.id,
+        storeId: campaign.user_store_id,
+        storeLabel
+      }
     }));
   }
 
@@ -238,7 +242,7 @@
           })
         });
         setFeedback(module, "この割引情報は保存済みです。割引期間を最新の内容に更新しました。");
-        notifyDiscountSaved(campaign);
+        notifyDiscountSaved(campaign, storeLabel);
         return;
       }
       await A.request("nsp_user_discounts", {
@@ -262,7 +266,7 @@
       });
       A.track(campaign.id, "save_discount");
       setFeedback(module, "割引メモへ保存しました。割引メモで確認できます。");
-      notifyDiscountSaved(campaign);
+      notifyDiscountSaved(campaign, storeLabel);
     } catch (error) {
       setFeedback(module, "割引メモへ保存できませんでした。");
       A.logError(PAGE, "save_store_ad", error);

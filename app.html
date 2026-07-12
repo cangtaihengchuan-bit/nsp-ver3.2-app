@@ -2265,7 +2265,7 @@
         const allNotes = loadNotes();
         allNotes[storeId] = (allNotes[storeId] || []).map((note) => ({
           ...note,
-          storeLabel: note.isShared ? note.storeLabel : storeLabel,
+          storeLabel,
         }));
         state.notes = allNotes;
         if (state.discountLabelFilter === previousLabel) {
@@ -3617,8 +3617,14 @@
         }
       }
 
-      window.addEventListener("kaimono-clock-discount-saved", async () => {
+      window.addEventListener("kaimono-clock-discount-saved", async (event) => {
         if (!hasSession()) return;
+        const storeId = event.detail?.storeId;
+        const storeLabel = event.detail?.storeLabel;
+        if (storeId && storeLabel) {
+          updateLocalStoreLabel(storeId, storeLabel);
+          render();
+        }
         try {
           await loadNotesFromSupabase();
           render();
@@ -3630,7 +3636,7 @@
       syncScheduleFields();
       initializeApp();
     </script>
-    <script src="./ad-platform.js?v=20260712-4"></script>
-    <script src="./ad-user-surfaces.js?v=20260712-4"></script>
+    <script src="./ad-platform.js?v=20260712-5"></script>
+    <script src="./ad-user-surfaces.js?v=20260712-5"></script>
   </body>
 </html>
