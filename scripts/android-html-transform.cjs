@@ -30,6 +30,173 @@ function addHouseholdLocalDiscountAccess(html) {
   return replaceOnce(html, search, replacement, "household local discount cache");
 }
 
+function addAndroidIndexShell(html) {
+  let output = html;
+  output = replaceOnce(
+    output,
+    `<summary>ログイン・テーマ変更</summary>`,
+    `<summary>テーマ変更</summary>`,
+    "Android home theme summary",
+  );
+  output = replaceOnce(
+    output,
+    `      <h1><span>生活費を見ながら、</span><span>買い物を決める。</span></h1>
+      <p>
+        一人暮らしの食費・日用品・交通費を、買う前と買った後に確認できます。
+        ログインしなくても、まずは買い物メモと割引メモを試せます。
+      </p>
+      <div class="hero-actions">
+        <a class="primary" href="./shopping.html">
+          ログインせずに体験
+          <span>買い物予定と予算の目安を確認</span>
+        </a>
+        <a class="secondary-link" href="./app.html?sample=1&amp;v=20260712-7">
+          サンプルで試す
+          <span>近くの割引メモを見る</span>
+        </a>
+      </div>
+      <section class="flow-strip" aria-label="使い方の流れ">
+        <div class="flow-step">
+          <small>買う前</small>
+          <strong>予定と価格を確認</strong>
+          <span>買い物メモで必要なものを整理し、割引メモで価格やセール日を確認します。</span>
+        </div>
+        <div class="flow-step">
+          <small>買った後</small>
+          <strong>支出と残り予算を確認</strong>
+          <span>家計簿へ支出を登録し、今月の生活費がどのくらい残っているか確認します。</span>
+        </div>
+      </section>
+`,
+    "",
+    "Android home promotional content",
+  );
+  output = replaceOnce(
+    output,
+    `      <div class="actions">
+        <a href="./shopping.html">
+          買い物メモを開く
+          <span>買い物予定が予算内か確認</span>
+        </a>
+        <a href="./app.html?v=20260712-7">
+          割引メモを開く
+          <span>価格やセール日を確認</span>
+        </a>
+        <a href="./household.html">
+          家計簿を開く
+          <span>生活費と残り予算を確認</span>
+        </a>
+      </div>`,
+    `      <nav class="actions android-home-nav" aria-label="アプリのページ">
+        <a href="./shopping.html">買い物メモ</a>
+        <a href="./app.html?v=20260712-7">割引メモ</a>
+        <a href="./household.html">家計簿</a>
+      </nav>`,
+    "Android home navigation",
+  );
+  output = replaceOnce(
+    output,
+    "</head>",
+    `  <style id="android-home-style">
+      main > h1,
+      main > p,
+      .hero-actions,
+      .flow-strip,
+      #authBox .auth-status,
+      #authBox .auth-form,
+      #authBox .auth-session { display:none!important; }
+      main { min-height:calc(100dvh - 32px);display:flex;flex-direction:column;justify-content:center;gap:24px; }
+      .top-row { align-items:center; }
+      #authBox { width:min(240px,100%); }
+      #authBox .auth-tools { padding-top:12px; }
+      .android-home-nav { display:grid;grid-template-columns:1fr;gap:12px; }
+      .android-home-nav a { min-height:64px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:1.05rem;font-weight:800; }
+      @media (min-width:700px) { .android-home-nav { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    </style>
+</head>`,
+    "Android home styles",
+  );
+  return output;
+}
+
+function addAndroidDiscountShell(html) {
+  let output = html;
+  output = replaceOnce(
+    output,
+    `          <button id="sampleBtn" class="btn btn-primary" type="button">サンプルで試す</button>
+          <p class="location-use-note">近くの店舗を探す場合だけ、現在地を使います。</p>
+          <button id="locateBtn" class="btn btn-ghost" type="button">近くの割引を探す</button>
+          <button id="savedLocationBtn" class="btn btn-ghost" type="button">登録地点から探す</button>
+          <a class="btn btn-ghost" href="./shopping.html">買い物メモを開く</a>
+          <a class="btn btn-ghost" href="./household.html">家計簿を開く</a>`,
+    `          <p class="location-use-note">店舗を探す方法を選択してください。現在地は検索時だけ使用します。</p>
+          <div class="android-location-switch" role="group" aria-label="店舗の検索方法">
+            <button id="locateBtn" class="android-location-option is-active" type="button" aria-pressed="true">現在地から</button>
+            <button id="savedLocationBtn" class="android-location-option" type="button" aria-pressed="false">登録地点から</button>
+          </div>`,
+    "Android discount location controls",
+  );
+  output = replaceOnce(
+    output,
+    `      elements.locateBtn.addEventListener("click", () => {`,
+    `      const setLocationSearchMode = (mode) => {
+        const useCurrent = mode === "current";
+        elements.locateBtn.classList.toggle("is-active", useCurrent);
+        elements.savedLocationBtn.classList.toggle("is-active", !useCurrent);
+        elements.locateBtn.setAttribute("aria-pressed", String(useCurrent));
+        elements.savedLocationBtn.setAttribute("aria-pressed", String(!useCurrent));
+      };
+
+      elements.locateBtn.addEventListener("click", () => {
+        setLocationSearchMode("current");`,
+    "Android current location selection",
+  );
+  output = replaceOnce(
+    output,
+    `      elements.savedLocationBtn.addEventListener("click", () => {
+        elements.locationPanel.classList.remove("hidden-panel");`,
+    `      elements.savedLocationBtn.addEventListener("click", () => {
+        setLocationSearchMode("saved");
+        elements.locationPanel.classList.remove("hidden-panel");`,
+    "Android saved location selection",
+  );
+  output = replaceOnce(
+    output,
+    `      elements.sampleBtn.addEventListener("click", () => { void useSample(); });
+
+`,
+    "",
+    "Android sample event removal",
+  );
+  output = replaceOnce(
+    output,
+    `        if (new URLSearchParams(location.search).get("sample") === "1") {
+          void useSample();
+        }`,
+    `        if (new URLSearchParams(location.search).has("sample")) {
+          const cleanUrl = new URL(location.href);
+          cleanUrl.searchParams.delete("sample");
+          history.replaceState(null, "", cleanUrl);
+        }`,
+    "Android sample removal",
+  );
+  output = replaceOnce(
+    output,
+    "</head>",
+    `  <style id="android-discount-style">
+      .android-location-switch { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface); }
+      .android-location-option { min-width:0;min-height:48px;border:0;border-radius:0;padding:10px 8px;color:var(--muted);background:transparent;font:800 0.92rem/1.2 inherit; }
+      .android-location-option + .android-location-option { border-left:1px solid var(--line); }
+      .android-location-option.is-active { color:#fff;background:var(--primary); }
+      html[data-theme="white-blue"] .android-location-option.is-active { color:#fff;background:#238bc1; }
+      .native-local-mode #authPanel { display:grid!important; }
+    </style>
+</head>`,
+    "Android discount styles",
+  );
+  return output;
+}
+
 function addAppLocalStorage(html) {
   let output = html;
   output = replaceOnce(
@@ -181,7 +348,11 @@ function addAppLocalStorage(html) {
 
 function transformAndroidHtml(fileName, html) {
   let output = html;
-  if (fileName === "app.html") output = addAppLocalStorage(output);
+  if (fileName === "index.html") output = addAndroidIndexShell(output);
+  if (fileName === "app.html") {
+    output = addAppLocalStorage(output);
+    output = addAndroidDiscountShell(output);
+  }
   if (fileName === "shopping.html") output = addLocalDiscountAccess(output);
   if (fileName === "household.html") output = addHouseholdLocalDiscountAccess(output);
   output = replaceOnce(output, "</head>", `${HEAD_TAG}</head>`, `${fileName} head injection`);

@@ -6,6 +6,7 @@
 
   const MODE_KEY = "kaimono-clock-android-storage-mode-v1";
   const SESSION_KEY = "kaimono-clock-session-v2";
+  const THEME_KEY = "kaimono-clock-theme";
   const LOCAL_USER_ID = "android-local-user";
   const SUPABASE_URL = "https://wnxphjricowzxbkwnmjx.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdWJhc2UiLCJyZWYiOiJ3bnhwaGpyaWNvd3p4Ymt3bm1qeCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzgxOTA5OTgzLCJleHAiOjIwOTc0ODU5ODN9.p6lu6gNpdkTg0Nvnxj05m2tHbYeihYP7jFPdIEWfSxo";
@@ -19,6 +20,8 @@
     "monthMateCategoryBudgets"
   ];
   const SHARE_CONTROL_SELECTOR = "#acceptSharedDiscounts, #shareDiscount, [data-action=\"toggle-share\"]";
+
+  if (!localStorage.getItem(THEME_KEY)) localStorage.setItem(THEME_KEY, "white-blue");
 
   const mode = () => localStorage.getItem(MODE_KEY) === "cloud" ? "cloud" : "local";
   const isLocal = () => mode() === "local";
@@ -232,13 +235,19 @@
     style.textContent = `
       .native-local-mode .auth-box,
       .native-local-mode .nav-auth-form,
-      .native-local-mode #authPanel,
       .native-local-mode #shoppingLogoutBtn,
       .native-local-mode #householdLogoutBtn,
       .native-local-mode #acceptSharedDiscounts,
       .native-local-mode [aria-label="共有設定"],
       .native-local-mode #storeAdMount,
       .native-local-mode .store-ad-surface { display:none!important; }
+      .native-local-mode .auth-box { display:block!important; }
+      .native-local-mode .auth-box .auth-status,
+      .native-local-mode .auth-box .auth-form,
+      .native-local-mode .auth-box .auth-session,
+      .native-local-mode #authPanel .auth-copy,
+      .native-local-mode #authPanel .auth-form,
+      .native-local-mode #authPanel .auth-session { display:none!important; }
       .native-local-mode body,
       .native-cloud-mode body { padding-bottom:calc(env(safe-area-inset-bottom) + 72px)!important; }
       .android-storage-mode-button { position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:9998;min-width:72px;min-height:44px;border:1px solid #187a75;border-radius:8px;padding:8px 12px;color:#073936;background:#9ce5dc;font:800 14px/1 "Segoe UI","Yu Gothic UI",sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.18); }

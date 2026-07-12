@@ -28,9 +28,24 @@ const transformedApp = transformAndroidHtml(
 assert.match(transformedApp, /割引情報をこの端末に保存しました/);
 assert.match(transformedApp, /state\.user = \{ id: window\.KaimonoAndroidStorage\.localUserId/);
 assert.match(transformedApp, /if \(window\.KaimonoAndroidStorage\?\.isLocal\(\)\) \{ return true; \}/);
+assert.doesNotMatch(transformedApp, /サンプルで試す/);
+assert.match(transformedApp, /class="android-location-switch"/);
+assert.match(transformedApp, /aria-label="店舗の検索方法"/);
+assert.match(transformedApp, /\.native-local-mode #authPanel \{ display:grid!important; \}/);
+
+const transformedIndex = transformAndroidHtml(
+  "index.html",
+  fs.readFileSync(path.join(root, "index.html"), "utf8").replace(/\r\n/g, "\n")
+);
+assert.doesNotMatch(transformedIndex, /ログインせずに体験|サンプルで試す|<small>買う前<\/small>|<small>買った後<\/small>/);
+assert.match(transformedIndex, /<summary>テーマ変更<\/summary>/);
+assert.match(transformedIndex, /<nav class="actions android-home-nav"/);
+assert.equal((transformedIndex.match(/class="actions android-home-nav"/g) || []).length, 1);
 
 const androidRuntimeSource = fs.readFileSync(path.join(root, "scripts", "android-local-mode.js"), "utf8");
 assert.equal(androidRuntimeSource.includes(":has("), false, "Android runtime must avoid expensive :has() selectors");
+assert.match(androidRuntimeSource, /localStorage\.setItem\(THEME_KEY, "white-blue"\)/);
+assert.doesNotMatch(androidRuntimeSource, /\.native-local-mode #authPanel,/);
 assert.match(androidRuntimeSource, /hasNewShareControl/);
 assert.doesNotMatch(androidRuntimeSource, /new MutationObserver\(updateNativeUi\).*observe\(document\.body/s);
 
