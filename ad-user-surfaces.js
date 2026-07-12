@@ -175,11 +175,46 @@
     setFeedback(module, `${campaign.product_name}を買い物メモへ追加しました。`);
   }
 
-  async function saveDiscount(campaign, module) {
+  function localDateValue(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  async function saveDiscount(campaign, module, button) {
     if (!A.session()) return;
+    const startDate = localDateValue(campaign.starts_at);
+    const endDate = localDateValue(campaign.ends_at);
+    const isRange = Boolean(startDate && endDate && startDate !== endDate);
+    const price = Number(campaign.sale_price || campaign.regular_price || 0);
+    const note = `店舗からのお知らせ: ${campaign.headline}`;
+    button.disabled = true;
     try {
+      const existing = await A.request(
+        `nsp_user_discounts?select=id&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
+        + `&item_name=eq.${encodeURIComponent(campaign.product_name)}`
+        + `&price=eq.${encodeURIComponent(price)}`
+        + `&note=eq.${encodeURIComponent(note)}&limit=1`
+      );
+      if (existing?.length) {
+        await A.request(`nsp_user_discounts?id=eq.${encodeURIComponent(existing[0].id)}`, {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({
+            sale_mode: isRange ? "range" : "once",
+            sale_date: startDate || null,
+            sale_end_date: isRange ? endDate : null
+          })
+        });
+        setFeedback(module, "この割引情報は保存済みです。割引期間を最新の内容に更新しました。");
+        return;
+      }
       await A.request("nsp_user_discounts", {
         method: "POST",
+        headers: { Prefer: "return=minimal" },
         body: JSON.stringify({
           user_id: A.session().user.id,
           store_id: campaign.user_store_id,
@@ -188,10 +223,11 @@
           origin_label: "広告",
           store_type: "store_ad",
           item_name: campaign.product_name,
-          price: Number(campaign.sale_price || campaign.regular_price || 0),
-          sale_mode: "once",
-          sale_date: new Date(campaign.ends_at).toISOString().slice(0, 10),
-          note: `店舗からのお知らせ: ${campaign.headline}`,
+          price,
+          sale_mode: isRange ? "range" : "once",
+          sale_date: startDate || null,
+          sale_end_date: isRange ? endDate : null,
+          note,
           shared_enabled: false
         })
       });
@@ -200,13 +236,16 @@
     } catch (error) {
       setFeedback(module, "割引メモへ保存できませんでした。");
       A.logError(PAGE, "save_store_ad", error);
+    } finally {
+      button.disabled = false;
     }
   }
 
   function bindCard(module, node, campaign) {
     if (!campaign) return;
     node.querySelector('[data-action="add"]').onclick = () => addToShopping(campaign, module);
-    node.querySelector('[data-action="save"]').onclick = () => saveDiscount(campaign, module);
+    const saveButton = node.querySelector('[data-action="save"]');
+    saveButton.onclick = () => saveDiscount(campaign, module, saveButton);
     node.querySelector('[data-action="map"]').onclick = () => {
       A.track(campaign.id, "map_open");
       window.open(mapUrl(campaign), "_blank", "noopener");

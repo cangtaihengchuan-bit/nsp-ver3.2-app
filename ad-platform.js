@@ -32,7 +32,8 @@
       throw new Error(body || `Supabase request failed: ${response.status}`);
     }
     if (response.status === 204) return null;
-    return response.json();
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   }
 
   async function rpc(name, args = {}) {
