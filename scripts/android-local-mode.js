@@ -209,7 +209,7 @@
         if (details && !details.hidden) details.hidden = true;
       });
       const dataManagementCopy = document.querySelector(".data-management .muted");
-      if (dataManagementCopy?.textContent !== "この端末に保存した割引メモをまとめて削除します。") {
+      if (dataManagementCopy && dataManagementCopy.textContent !== "この端末に保存した割引メモをまとめて削除します。") {
         dataManagementCopy.textContent = "この端末に保存した割引メモをまとめて削除します。";
       }
     }

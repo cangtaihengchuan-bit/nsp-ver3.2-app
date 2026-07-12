@@ -1,6 +1,6 @@
 {
   "name": "kaimono-clock-android",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Kaimono Clock Android package",
   "scripts": {
