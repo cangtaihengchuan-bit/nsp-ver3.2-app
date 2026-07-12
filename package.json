@@ -1,0 +1,21 @@
+{
+  "name": "kaimono-clock-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kaimono Clock Android package",
+  "scripts": {
+    "web:bundle": "node scripts/build-android-web.cjs",
+    "android:sync": "npm run web:bundle && cap sync android",
+    "android:build:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:build:release": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+    "android:open": "npm run android:sync && cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.1",
+    "@capacitor/app": "8.0.1",
+    "@capacitor/core": "8.4.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.1"
+  }
+}

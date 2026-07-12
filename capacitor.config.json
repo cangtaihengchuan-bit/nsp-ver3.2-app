@@ -1,0 +1,12 @@
+{
+  "appId": "jp.kaimonoclock.app",
+  "appName": "Kaimono Clock",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#f4f8fb",
+    "allowMixedContent": false
+  }
+}
