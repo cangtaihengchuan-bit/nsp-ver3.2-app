@@ -197,18 +197,33 @@
     const isRange = Boolean(startDate && endDate && startDate !== endDate);
     const price = Number(campaign.sale_price || campaign.regular_price || 0);
     const note = `店舗からのお知らせ: ${campaign.headline}`;
+    const sessionUserId = A.session().user.id;
     button.disabled = true;
     try {
-      const labelRows = await A.request(
-        `nsp_user_discounts?select=store_label&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
-        + "&store_type=neq.store_ad&store_label=not.is.null&order=created_at.desc&limit=1"
-      );
-      const storeLabel = labelRows?.[0]?.store_label || campaign.store_name || "店舗";
       const existing = await A.request(
-        `nsp_user_discounts?select=id&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
+        `nsp_user_discounts?select=id,store_label&user_id=eq.${encodeURIComponent(sessionUserId)}`
+        + `&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
         + `&item_name=eq.${encodeURIComponent(campaign.product_name)}`
         + `&price=eq.${encodeURIComponent(price)}`
         + `&note=eq.${encodeURIComponent(note)}&limit=1`
+      );
+      const labelRows = await A.request(
+        `nsp_user_discounts?select=store_label&user_id=eq.${encodeURIComponent(sessionUserId)}`
+        + `&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`
+        + "&store_type=neq.store_ad&store_label=not.is.null&order=created_at.desc&limit=1"
+      );
+      const existingLabel = existing?.[0]?.store_label || "";
+      const storeLabel = existingLabel && existingLabel !== campaign.store_name
+        ? existingLabel
+        : labelRows?.[0]?.store_label || campaign.store_name || "店舗";
+      await A.request(
+        `nsp_user_discounts?user_id=eq.${encodeURIComponent(sessionUserId)}`
+        + `&store_id=eq.${encodeURIComponent(campaign.user_store_id)}`,
+        {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ store_label: storeLabel })
+        }
       );
       if (existing?.length) {
         await A.request(`nsp_user_discounts?id=eq.${encodeURIComponent(existing[0].id)}`, {
@@ -229,7 +244,7 @@
         method: "POST",
         headers: { Prefer: "return=minimal" },
         body: JSON.stringify({
-          user_id: A.session().user.id,
+          user_id: sessionUserId,
           store_id: campaign.user_store_id,
           store_name: campaign.store_name || "店舗",
           store_label: storeLabel,
