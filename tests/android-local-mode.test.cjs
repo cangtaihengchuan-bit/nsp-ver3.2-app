@@ -64,6 +64,8 @@ const transformedHousehold = transformAndroidHtml(
   fs.readFileSync(path.join(root, "household.html"), "utf8").replace(/\r\n/g, "\n")
 );
 assert.match(transformedHousehold, /class="android-page-icon" src="\.\/android-icon-household\.svg"/);
+assert.match(transformedHousehold, /#menuToggle \{ position:fixed!important;top:8px;left:12px;margin:0; \}/);
+assert.match(transformedHousehold, /\.app-shell \{ padding-top:64px; \}/);
 
 const androidRuntimeSource = fs.readFileSync(path.join(root, "scripts", "android-local-mode.js"), "utf8");
 assert.equal(androidRuntimeSource.includes(":has("), false, "Android runtime must avoid expensive :has() selectors");

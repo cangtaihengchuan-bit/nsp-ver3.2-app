@@ -219,6 +219,13 @@ function addAndroidDiscountShell(html) {
 
 function addAndroidPageIcon(fileName, html) {
   let output = html;
+  const householdMenuStyle = fileName === "household.html"
+    ? `
+      @media (max-width:640px) {
+        .app-shell { padding-top:64px; }
+        #menuToggle { position:fixed!important;top:8px;left:12px;margin:0; }
+      }`
+    : "";
   if (fileName === "shopping.html") {
     output = replaceOnce(
       output,
@@ -270,6 +277,7 @@ function addAndroidPageIcon(fileName, html) {
       .android-page-icon { width:40px;height:40px;display:block;flex:0 0 40px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface,#fff);object-fit:contain; }
       .brand-block > .android-page-icon { width:48px;height:48px;flex-basis:48px; }
       html[data-theme="cool"] .android-page-icon { filter:invert(94%) sepia(7%) saturate(407%) hue-rotate(164deg) brightness(98%) contrast(90%);background:#f4f8fb; }
+      ${householdMenuStyle}
     </style>
 </head>`,
     `${fileName} Android page icon styles`,
