@@ -32,4 +32,15 @@ for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
 
 fs.copyFileSync(path.join(__dirname, "android-bridge.js"), path.join(output, "android-bridge.js"));
 fs.copyFileSync(path.join(__dirname, "android-local-mode.js"), path.join(output, "android-local-mode.js"));
+fs.copyFileSync(path.join(__dirname, "android-home-illustration.svg"), path.join(output, "android-home-illustration.svg"));
+for (const [sourceName, outputName] of [
+  ["shopping-bag.svg", "android-icon-shopping.svg"],
+  ["tag.svg", "android-icon-discount.svg"],
+  ["wallet-cards.svg", "android-icon-household.svg"],
+]) {
+  fs.copyFileSync(
+    path.join(root, "node_modules", "lucide-static", "icons", sourceName),
+    path.join(output, outputName),
+  );
+}
 console.log(`Android web bundle created at ${output}`);

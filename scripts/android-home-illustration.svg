@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 190" role="img" aria-labelledby="title desc">
+  <title id="title">買い物と生活費の管理</title>
+  <desc id="desc">買い物袋、値札、レシート、時計を組み合わせた線画</desc>
+  <g fill="none" stroke="#3a8fbd" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
+    <path fill="#e8f7ff" d="M89 58h116l15 105H73L89 58Z"/>
+    <path d="M116 69c0-31 62-31 62 0"/>
+    <path fill="#fff" d="M199 37h76v112l-11-7-11 7-11-7-11 7-11-7-11 7-10-7V37Z"/>
+    <path d="M216 65h42M216 87h32M216 109h39"/>
+    <circle cx="286" cy="60" r="34" fill="#dff7f2" stroke="#2d8f84"/>
+    <path d="M286 43v18l13 8" stroke="#2d8f84"/>
+    <path fill="#fff3ed" d="m72 88-29 29 37 37 29-29-4-33-33-4Z" stroke="#e87b61"/>
+    <circle cx="90" cy="106" r="5" fill="#e87b61" stroke="#e87b61"/>
+  </g>
+  <path d="M39 171h282" fill="none" stroke="#b9d9f0" stroke-linecap="round" stroke-width="5"/>
+</svg>

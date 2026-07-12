@@ -87,10 +87,13 @@ function addAndroidIndexShell(html) {
           <span>生活費と残り予算を確認</span>
         </a>
       </div>`,
-    `      <nav class="actions android-home-nav" aria-label="アプリのページ">
-        <a href="./shopping.html">買い物メモ</a>
-        <a href="./app.html?v=20260712-7">割引メモ</a>
-        <a href="./household.html">家計簿</a>
+    `      <figure class="android-home-visual" aria-label="買い物と生活費を管理するイメージ">
+        <img src="./android-home-illustration.svg" alt="" width="360" height="190" />
+      </figure>
+      <nav class="actions android-home-nav" aria-label="アプリのページ">
+        <a href="./shopping.html"><img src="./android-icon-shopping.svg" alt="" width="24" height="24" /><span>買い物メモ</span></a>
+        <a href="./app.html?v=20260712-7"><img src="./android-icon-discount.svg" alt="" width="24" height="24" /><span>割引メモ</span></a>
+        <a href="./household.html"><img src="./android-icon-household.svg" alt="" width="24" height="24" /><span>家計簿</span></a>
       </nav>`,
     "Android home navigation",
   );
@@ -105,12 +108,20 @@ function addAndroidIndexShell(html) {
       #authBox .auth-status,
       #authBox .auth-form,
       #authBox .auth-session { display:none!important; }
-      main { min-height:calc(100dvh - 32px);display:flex;flex-direction:column;justify-content:center;gap:24px; }
+      html,body { min-height:100%; }
+      body { min-height:100dvh;display:flex;align-items:stretch;padding-bottom:0!important; }
+      .native-local-mode body,.native-cloud-mode body { padding-bottom:0!important; }
+      main { min-height:100dvh;display:flex;flex:1 0 auto;flex-direction:column;justify-content:center;gap:18px;margin:0 auto; }
       .top-row { align-items:center; }
       #authBox { width:min(240px,100%); }
       #authBox .auth-tools { padding-top:12px; }
+      .android-home-visual { width:min(100%,360px);min-height:150px;display:grid;place-items:center;align-self:center;margin:0; }
+      .android-home-visual img { width:100%;height:auto;max-height:190px;display:block;object-fit:contain; }
       .android-home-nav { display:grid;grid-template-columns:1fr;gap:12px; }
-      .android-home-nav a { min-height:64px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:1.05rem;font-weight:800; }
+      .android-home-nav a { min-height:64px;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;font-size:1.05rem;font-weight:800; }
+      .android-home-nav a img { width:24px;height:24px;flex:0 0 24px;filter:none; }
+      html[data-theme="cool"] .android-home-nav a img { filter:invert(94%) sepia(7%) saturate(407%) hue-rotate(164deg) brightness(98%) contrast(90%); }
+      @media (max-height:700px) { main { justify-content:flex-start; } .android-home-visual { min-height:112px; } .android-home-visual img { max-height:132px; } }
       @media (min-width:700px) { .android-home-nav { grid-template-columns:repeat(3,minmax(0,1fr)); } }
     </style>
 </head>`,
@@ -193,6 +204,66 @@ function addAndroidDiscountShell(html) {
     </style>
 </head>`,
     "Android discount styles",
+  );
+  return output;
+}
+
+function addAndroidPageIcon(fileName, html) {
+  let output = html;
+  if (fileName === "shopping.html") {
+    output = replaceOnce(
+      output,
+      `          <p class="eyebrow">Shopping</p>
+          <h1>買い物メモ</h1>`,
+      `          <p class="eyebrow">Shopping</p>
+          <div class="android-page-title">
+            <img class="android-page-icon" src="./android-icon-shopping.svg" alt="" width="40" height="40" />
+            <h1>買い物メモ</h1>
+          </div>`,
+      "Android shopping page icon",
+    );
+  }
+  if (fileName === "app.html") {
+    output = replaceOnce(
+      output,
+      `          <h1>
+            <span>近くの価格やセール日を保存して、買い物前に確認。</span>
+          </h1>`,
+      `          <div class="android-page-title">
+            <img class="android-page-icon" src="./android-icon-discount.svg" alt="" width="40" height="40" />
+            <h1><span>近くの価格やセール日を保存して、買い物前に確認。</span></h1>
+          </div>`,
+      "Android discount page icon",
+    );
+  }
+  if (fileName === "household.html") {
+    output = replaceOnce(
+      output,
+      `          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img">
+              <path d="M13 22c0-5 4-9 9-9h21c5 0 9 4 9 9v25c0 5-4 9-9 9H22c-5 0-9-4-9-9V22z" fill="#132238"/>
+              <path d="M18 23c0-3 2-5 5-5h20c3 0 5 2 5 5v23c0 3-2 5-5 5H23c-3 0-5-2-5-5V23z" fill="#0f766e"/>
+              <path d="M22 27h22v5H22v-5zm0 10h10v10H22V37zm14 0h8v3h-8v-3zm0 7h8v3h-8v-3z" fill="#e7eef6"/>
+              <path d="M16 13c3 0 7 2 8 6-5 1-9-1-8-6z" fill="#38bdf8"/>
+              <path d="M43 12c-4 1-6 4-5 8 5-1 7-4 5-8z" fill="#818cf8"/>
+            </svg>
+          </div>`,
+      `          <img class="android-page-icon" src="./android-icon-household.svg" alt="" width="40" height="40" />`,
+      "Android household page icon",
+    );
+  }
+  output = replaceOnce(
+    output,
+    "</head>",
+    `  <style id="android-page-icon-style">
+      .android-page-title { display:flex;align-items:center;gap:12px;min-width:0; }
+      .android-page-title h1 { margin:0;min-width:0; }
+      .android-page-icon { width:40px;height:40px;display:block;flex:0 0 40px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface,#fff);object-fit:contain; }
+      .brand-block > .android-page-icon { width:48px;height:48px;flex-basis:48px; }
+      html[data-theme="cool"] .android-page-icon { filter:invert(94%) sepia(7%) saturate(407%) hue-rotate(164deg) brightness(98%) contrast(90%);background:#f4f8fb; }
+    </style>
+</head>`,
+    `${fileName} Android page icon styles`,
   );
   return output;
 }
@@ -355,6 +426,9 @@ function transformAndroidHtml(fileName, html) {
   }
   if (fileName === "shopping.html") output = addLocalDiscountAccess(output);
   if (fileName === "household.html") output = addHouseholdLocalDiscountAccess(output);
+  if (["shopping.html", "app.html", "household.html"].includes(fileName)) {
+    output = addAndroidPageIcon(fileName, output);
+  }
   output = replaceOnce(output, "</head>", `${HEAD_TAG}</head>`, `${fileName} head injection`);
   output = replaceOnce(output, "</body>", `${BODY_TAG}</body>`, `${fileName} body injection`);
   return output;

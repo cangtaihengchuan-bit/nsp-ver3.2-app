@@ -32,6 +32,7 @@ assert.doesNotMatch(transformedApp, /サンプルで試す/);
 assert.match(transformedApp, /class="android-location-switch"/);
 assert.match(transformedApp, /aria-label="店舗の検索方法"/);
 assert.match(transformedApp, /\.native-local-mode #authPanel \{ display:grid!important; \}/);
+assert.match(transformedApp, /class="android-page-icon" src="\.\/android-icon-discount\.svg"/);
 
 const transformedIndex = transformAndroidHtml(
   "index.html",
@@ -39,8 +40,26 @@ const transformedIndex = transformAndroidHtml(
 );
 assert.doesNotMatch(transformedIndex, /ログインせずに体験|サンプルで試す|<small>買う前<\/small>|<small>買った後<\/small>/);
 assert.match(transformedIndex, /<summary>テーマ変更<\/summary>/);
+assert.match(transformedIndex, /class="android-home-visual"/);
+assert.match(transformedIndex, /android-home-illustration\.svg/);
 assert.match(transformedIndex, /<nav class="actions android-home-nav"/);
+assert.match(transformedIndex, /android-icon-shopping\.svg/);
+assert.match(transformedIndex, /android-icon-discount\.svg/);
+assert.match(transformedIndex, /android-icon-household\.svg/);
+assert.match(transformedIndex, /body \{ min-height:100dvh;[^}]*padding-bottom:0!important;/);
 assert.equal((transformedIndex.match(/class="actions android-home-nav"/g) || []).length, 1);
+
+const transformedShopping = transformAndroidHtml(
+  "shopping.html",
+  fs.readFileSync(path.join(root, "shopping.html"), "utf8").replace(/\r\n/g, "\n")
+);
+assert.match(transformedShopping, /class="android-page-icon" src="\.\/android-icon-shopping\.svg"/);
+
+const transformedHousehold = transformAndroidHtml(
+  "household.html",
+  fs.readFileSync(path.join(root, "household.html"), "utf8").replace(/\r\n/g, "\n")
+);
+assert.match(transformedHousehold, /class="android-page-icon" src="\.\/android-icon-household\.svg"/);
 
 const androidRuntimeSource = fs.readFileSync(path.join(root, "scripts", "android-local-mode.js"), "utf8");
 assert.equal(androidRuntimeSource.includes(":has("), false, "Android runtime must avoid expensive :has() selectors");
